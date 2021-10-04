@@ -9,8 +9,13 @@ class arduino_com:
         self.rtimeout = rtimeout
         self.arduino = 0 # will be serial object
 
-    def begin(self):
-        self.arduino = serial.Serial(port=self.port, baudrate=self.baudrate, timeout=self.rtimeout)
+    def begin(self, delay=2):
+        self.arduino = serial.Serial(port=self.port, baudrate=self.baudrate, 
+                                     timeout=self.rtimeout)
+        # arduino resets after serial connection, wait for arduino to setup 
+        time.sleep(delay)
+        while (not self.read_line()):
+            pass
 
     def write(self, msg, delay=0.05):
         self.arduino.write(msg.encode()) 

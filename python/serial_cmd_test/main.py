@@ -17,4 +17,6 @@ if __name__ == "__main__":
         print ("you entered", var)
         arduino_serial.write(var)
         data = arduino_serial.read_line()
+        if (not data):
+            print("nothing returned")
         print(data)

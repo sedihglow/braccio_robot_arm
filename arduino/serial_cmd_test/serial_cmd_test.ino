@@ -15,6 +15,7 @@ void setup()
     Serial.begin(BAUD_RATE);
     while (!Serial) {} // wait for serial interace to connect
     Serial.setTimeout(1);
+    Serial.print("Setup Complete"); // let serial com know setup complete
 }
 
 void loop()
