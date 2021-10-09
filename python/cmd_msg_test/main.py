@@ -2,6 +2,8 @@ from arduino_serial import arduino_com
 from command import command_msg
 from command import command_interface
 
+import time
+
 BAUD_RATE = 115200
 SERIAL_PORT = "/dev/ttyACM0"
 RTIMEOUT = 0.5 # read serial timeout
@@ -15,6 +17,11 @@ if __name__ == "__main__":
     msg = cmd_msg.build_cmd_msg(cmd_msg.S0_ANGLE, 90) 
 
     arduino_serial.write(msg)
-    print(msg)
-    print(arduino_serial.read_line())
-
+    print("reading message from arduino")
+    time.sleep(1)
+    data = arduino_serial.read_line()
+    print(data)
+    
+    # data should read empty in this iteration based on arduino code
+    data = arduino_serial.read_line()
+    print(data)

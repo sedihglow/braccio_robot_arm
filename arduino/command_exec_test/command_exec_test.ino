@@ -3,12 +3,16 @@
  * written by: James Ross
  */
 
+#include "command.h"
+
 #define BAUD_RATE 115200
 #define MSG_BUFF 256
 #define S_IN_BUFF 10 // serial input buffer size
 
 uint8_t serial_in[S_IN_BUFF] = {'\0'};
 char serial_msg[MSG_BUFF] = {'\0'};
+
+command cmd = command(Serial);
 
 void setup()
 {
@@ -27,5 +31,7 @@ void loop()
         serial_in[num_recv] = '\0';
         sprintf(serial_msg, "serial available, %s\n", serial_in);
         Serial.print(serial_msg);
+        //cmd.exec_command(serial_in);
+        //Serial.println("in loop");
     }
 }
