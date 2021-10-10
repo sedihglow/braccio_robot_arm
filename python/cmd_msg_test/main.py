@@ -11,10 +11,10 @@ BAUD_RATE = 115200
 SERIAL_PORT = os.environ.get("SERIAL_PORT", "/dev/ttyACM0")
 RTIMEOUT = 0.5 # read serial timeout
 
-if __name__ == "__main__":
+def main(serial_port = SERIAL_PORT):
     command = command_interface()
     cmd_msg = command_msg()
-    arduino_serial = arduino_com(SERIAL_PORT, BAUD_RATE, RTIMEOUT)
+    arduino_serial = arduino_com(serial_port, BAUD_RATE, RTIMEOUT)
     arduino_serial.begin()
 
     msg = cmd_msg.build_cmd_msg(cmd_msg.S0_ANGLE, 90) 
@@ -30,3 +30,6 @@ if __name__ == "__main__":
     data = arduino_serial.read_line()
     print(data)
     assert data == b""
+
+if __name__ == "__main__":
+    main()

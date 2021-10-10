@@ -39,6 +39,8 @@ import subprocess
 import contextlib
 import dataclasses
 
+import main
+
 # top level directory in this git repo is three levels up
 REPO_ROOT = pathlib.Path(__file__).parents[2].resolve()
 
@@ -112,5 +114,4 @@ class RunQEMU(unittest.TestCase):
 
 class TestSerial(RunQEMU, unittest.TestCase):
     def test_connect(self):
-        os.environ["SERIAL_PORT"] = self.serial_port
-        subprocess.check_call([sys.executable, "main.py"])
+        main.main(self.serial_port)
