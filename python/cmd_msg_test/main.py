@@ -2,10 +2,12 @@ from arduino_serial import arduino_com
 from command import command_msg
 from command import command_interface
 
+import os
 import time
 
 BAUD_RATE = 115200
-SERIAL_PORT = "/dev/ttyACM0"
+# grab serial port from environment variable if set
+SERIAL_PORT = os.environ.get("SERIAL_PORT", "/dev/ttyACM0")
 RTIMEOUT = 0.5 # read serial timeout
 
 if __name__ == "__main__":
