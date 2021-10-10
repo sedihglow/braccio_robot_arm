@@ -63,7 +63,7 @@ def start_qemu(bios):
             "-cpu",
             "avr6-avr-cpu",
             "-bios",
-            bios,
+            str(bios),
         ]
         qemu_proc = subprocess.Popen(qemu_cmd, start_new_session=True)
         serial_port_path = pathlib.Path(tempdir, "ttyACM0")
@@ -74,6 +74,8 @@ def start_qemu(bios):
         ]
         socat_proc = subprocess.Popen(socat_cmd, start_new_session=True)
         try:
+            while not serial_port_path.exists():
+                pass
             yield str(serial_port_path)
         finally:
             # Kill the whole process group (for problematic processes like qemu)
@@ -83,10 +85,32 @@ def start_qemu(bios):
         socat_proc.wait()
 
 
-class TestSerial(unittest.TestCase):
+class RunQEMU(unittest.TestCase):
+    """
+    Base class which will start QEMU to emulate an Arduino Uno machine using the
+    BIOS (the .elf output of arduino-cli compile) provided.
+
+    qemu-system-avr from QEMU Version 5.1.0 or newer is required.
+
+    Starts a new virtual machine for each test_ function.
+    """
+
+    BIOS = REPO_ROOT.joinpath("build", "serial_cmd_test.ino.elf")
+
+    def setUp(self):
+        self.qemu = start_qemu(self.BIOS)
+        # __enter__ is called at the begining of a `with` block. __exit__ is
+        # called at the end of a `with` block. By calling these functions
+        # explicitly within setUp() and tearDown() we ensure a new VM is created
+        # and destroyed each time.
+        self.serial_port = self.qemu.__enter__()
+
+    def tearDown(self):
+        self.qemu.__exit__(None, None, None)
+        del self.qemu
+
+
+class TestSerial(RunQEMU, unittest.TestCase):
     def test_connect(self):
-        with start_qemu(
-            str(REPO_ROOT.joinpath("build", "serial_cmd_test.ino.elf"))
-        ) as serial_port:
-            os.environ["SERIAL_PORT"] = serial_port
-            subprocess.check_call([sys.executable, "main.py"])
+        os.environ["SERIAL_PORT"] = self.serial_port
+        subprocess.check_call([sys.executable, "main.py"])

@@ -4,6 +4,7 @@ from command import command_interface
 
 import os
 import time
+import unittest
 
 BAUD_RATE = 115200
 # grab serial port from environment variable if set
@@ -23,7 +24,9 @@ if __name__ == "__main__":
     time.sleep(1)
     data = arduino_serial.read_line()
     print(data)
+    assert data == b""
     
     # data should read empty in this iteration based on arduino code
     data = arduino_serial.read_line()
     print(data)
+    assert data == b""
