@@ -33,5 +33,4 @@ void command::parse_msg(uint8_t *msg)
 void command::exec_command(uint8_t *msg)
 {
     serial.print("parse done in exec command\n");
-    serial.flush();
 }
