@@ -21,8 +21,12 @@ class arduino_com:
         self.arduino.write(msg) 
         time.sleep(delay)
 
-    def read(self):
-        return self.arduino.read()
+    def read(self, delay=0.1):
+        reading = self.arduino.read()
+        time.sleep(delay)
+        return reading
 
-    def read_line(self):
-        return self.arduino.readline()
+    def read_line(self, delay=0.1):
+        reading = self.arduino.readline()
+        time.sleep(delay)
+        return reading
