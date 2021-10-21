@@ -4,22 +4,24 @@
 #include <Arduino.h>
 #include <stdint.h>
 #include <errno.h>
-#include <string.h>
 
 
 #define MSG_SIZE_NO_PARAM 3 // msg_type, cmd, param_len, 3 bytes
 #define PARAM_BUFF 250
 #define IO_MSG_BUFF (MSG_SIZE_NO_PARAM + PARAM_BUFF)
 
-#define PARAM_STRING 0
+#define PARAM_STRLEN 0
 
+// msg type definitions
 #define CMD_MSG 0x0
 #define PRINT_MSG 0x1
 
+// outgoing cmd definitions
 #define PRINT_GENERAL 0x0
 #define PRINT_ERROR 0x1
 #define PRINT_VERBOSE 0x2
 
+// min max angles
 #define M1_MIN_ANGLE 0
 #define M1_MAX_ANGLE 180
 #define M2_MIN_ANGLE 15
@@ -33,6 +35,14 @@
 #define M6_MIN_ANGLE 10 // tongue is open
 #define M6_MAX_ANGLE 73 // gripper is closed
 
+// Safety angles
+#define M1_SAFE_ANGLE 90
+#define M2_SAFE_ANGLE 45
+#define M3_SAFE_ANGLE 180
+#define M4_SAFE_ANGLE 180
+#define M5_SAFE_ANGLE 90
+#define M6_SAFE_ANGLE 10
+
 enum servo_angle_cmd {
     M1_ANGLE=1, // base
     M2_ANGLE,   // shoulder
@@ -42,7 +52,6 @@ enum servo_angle_cmd {
     M6_ANGLE,   // gripper
     MX_ANGLE    // braccio_arm for all servo angles at once
 };
-
 
 typedef struct parsed_io_msg {
     uint8_t msg_type;
@@ -84,8 +93,12 @@ class braccio_arm {
         int create_io_msg(parsed_msg_s *msg, io_msg_s *io_msg);
         int send_message(io_msg_s *msg);
 
+        void set_default_pos();
+
     private:
         uint8_t check_angle(uint8_t angle, uint8_t min, uint8_t max);
+        void check_all_angles(uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4,
+                              uint8_t a5, uint8_t a6);
         int snprintf_check(char *buff, int size, const char *format, ...);
         
         Stream &serial;

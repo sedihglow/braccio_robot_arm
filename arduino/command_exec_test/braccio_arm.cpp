@@ -5,6 +5,13 @@
 
 braccio_arm::braccio_arm(Stream &serial): serial(serial)
 {
+    // set default angles into saftey position
+    angles.m1 = M1_SAFE_ANGLE;
+    angles.m2 = M2_SAFE_ANGLE;
+    angles.m3 = M3_SAFE_ANGLE;
+    angles.m4 = M4_SAFE_ANGLE;
+    angles.m5 = M5_SAFE_ANGLE;
+    angles.m6 = M6_SAFE_ANGLE;
 }
 
 braccio_arm::~braccio_arm()
@@ -21,17 +28,16 @@ int braccio_arm::send_print(const char *format, ...)
 
     snprintf_check((char*)set_msg, PARAM_BUFF, format, args);
     set_parsed_msg(&out_msg, PRINT_MSG, PRINT_GENERAL, 
-                   PARAM_STRING, set_msg);
+                   PARAM_STRLEN, set_msg);
     if (errno) {
-        send_error("%s, Failed to set parameters in parsed message.", 
-                   strerror(errno));
+        send_error("Failed to set parameters in parsed message.");
         errno = SUCCESS;
         return FAILURE;   
     }
 
     create_send_msg(&out_msg);
     if (errno) {
-        send_error("%s, Failed to create and send message", strerror(errno));
+        send_error("Failed to create and send message");
         errno = 0;
         return FAILURE;
     }
@@ -52,17 +58,16 @@ int braccio_arm::send_error(const char *format, ...)
 
     snprintf_check((char*)set_msg, PARAM_BUFF, format, args);
     set_parsed_msg(&out_msg, PRINT_MSG, PRINT_ERROR, 
-                   PARAM_STRING, set_msg);
+                   PARAM_STRLEN, set_msg);
     if (errno) {
-        send_error("%s, Failed to set parameters in parsed message.", 
-                   strerror(errno));
+        send_error("Failed to set parameters in parsed message."); 
         errno = SUCCESS;
         return FAILURE;   
     }
 
     create_send_msg(&out_msg);
     if (errno) {
-        send_error("%s, Failed to create and send message", strerror(errno));
+        send_error("Failed to create and send message");
         errno = 0;
         return FAILURE;
     }
@@ -82,18 +87,17 @@ int braccio_arm::send_verbose(const char *format, ...)
 
     snprintf_check((char*)set_msg, PARAM_BUFF, format, args);
     set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE, 
-                   PARAM_STRING, set_msg);
+                   PARAM_STRLEN, set_msg);
     if (errno) {
-        send_error("%s, Failed to set parameters in parsed message.", 
-                   strerror(errno));
+        send_error("Failed to set parameters in parsed message.");
         errno = SUCCESS;
         return FAILURE;   
     }
 
     create_send_msg(&out_msg);
     if (errno) {
-        send_error("%s, Failed to create and send message", strerror(errno));
-        errno = 0;
+        send_error("Failed to create and send message");
+        errno = SUCCESS;
         return FAILURE;
     }
 
@@ -101,8 +105,6 @@ int braccio_arm::send_verbose(const char *format, ...)
 
     return SUCCESS;
 }
-
-
 
 int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type, 
                                  uint8_t cmd, uint8_t param_len, 
@@ -113,11 +115,15 @@ int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type,
 
     fill->msg_type = msg_type;
     fill->cmd = cmd;
-
-    if (param_len == 0) { // treat param as string of variable length
+    
+    // If i dont do fill->param_len here compiler complains it may not be init
+    fill->param_len = param_len;
+    if (param_len == PARAM_STRLEN) { // treat param as string of variable length
         param_len = strnlen((char*)param, PARAM_BUFF-1) + 1; // for '\0'
         if (param_len == PARAM_BUFF && param[param_len-1] != '\0')
             return errno = EINVAL;
+    } else if (param_len > PARAM_BUFF) {
+        return errno = EINVAL;
     }
 
     fill->param_len = param_len;
@@ -143,19 +149,17 @@ int braccio_arm::parse_msg(uint8_t *msg, parsed_msg_s *in_msg)
 
     if (in_msg->param_len > PARAM_BUFF)
         return errno = EINVAL;
-
+    
+    // parse parameters
     for (k=0; k < in_msg->param_len; ++k)
         in_msg->param[k] = msg[i++];
 
     return SUCCESS;
 }
 
-/* TODO: error handling for functions called in switch */
+/* TODO: Insert braccio arm angle changing function in each case */
 int braccio_arm::exec_command(parsed_msg_s *in_msg)
 {
-    uint8_t set_msg[PARAM_BUFF] = {'\0'};
-    parsed_msg_s out_msg;
-
     if (in_msg->msg_type != CMD_MSG)
         return errno = EINVAL;
 
@@ -163,74 +167,40 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
     case M1_ANGLE:
         angles.m1 = check_angle(in_msg->param[0], M1_MIN_ANGLE, M1_MAX_ANGLE);
 
-        snprintf_check((char*)set_msg, PARAM_BUFF, 
-                       "Changed M1 angle to %u\n", angles.m1);
-        set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE, 
-                       PARAM_STRING, set_msg);
- 
-        create_send_msg(&out_msg);
+        send_verbose("Changed M1 angle to %u\n", angles.m1);
     break;
     case M2_ANGLE:
         angles.m2 = check_angle(in_msg->param[0], M2_MIN_ANGLE, M2_MAX_ANGLE); 
-        snprintf_check((char*)set_msg, PARAM_BUFF, 
-                       "Changed M2 angle to %u\n", angles.m2);
-        set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE, 
-                       PARAM_STRING, set_msg);
 
-        create_send_msg(&out_msg);
+        send_verbose("Changed M2 angle to %u\n", angles.m2);
     break;
     case M3_ANGLE:
         angles.m3 = check_angle(in_msg->param[0], M3_MIN_ANGLE, M3_MAX_ANGLE); 
-        snprintf_check((char*)set_msg, PARAM_BUFF, 
-                       "Changed M3 angle to %u\n", angles.m3);
-        set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE, 
-                       PARAM_STRING, set_msg);
 
-        create_send_msg(&out_msg);
+        send_verbose("Changed M3 angle to %u\n", angles.m3);
     break;
     case M4_ANGLE:
         angles.m4 = check_angle(in_msg->param[0], M4_MIN_ANGLE, M4_MAX_ANGLE); 
-        snprintf_check((char*)set_msg, PARAM_BUFF, 
-                       "Changed M4 angle to %u\n", angles.m4);
-        set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE, 
-                       PARAM_STRING, set_msg);
 
-        create_send_msg(&out_msg);
+        send_verbose("Changed M4 angle to %u\n", angles.m4);
     break;
     case M5_ANGLE:
         angles.m5 = check_angle(in_msg->param[0], M5_MIN_ANGLE, M5_MAX_ANGLE); 
-        snprintf_check((char*)set_msg, PARAM_BUFF, 
-                      "Changed M5 angle to %u\n", angles.m5);
-        set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE, 
-                       PARAM_STRING, set_msg);
 
-        create_send_msg(&out_msg);
+        send_verbose("Changed M5 angle to %u\n", angles.m5);
     break;
     case M6_ANGLE:
         angles.m6 = check_angle(in_msg->param[0], M6_MIN_ANGLE, M6_MAX_ANGLE); 
-        snprintf_check((char*)set_msg, PARAM_BUFF, 
-                       "Changed M6 angle to %u\n", angles.m6);
-        set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE, 
-                       PARAM_STRING, set_msg);
 
-        create_send_msg(&out_msg);
+        send_verbose("Changed M6 angle to %u\n", angles.m6);
     break;
     case MX_ANGLE:
-        angles.m1 = check_angle(in_msg->param[0], M1_MIN_ANGLE, M1_MAX_ANGLE);
-        angles.m2 = check_angle(in_msg->param[1], M2_MIN_ANGLE, M2_MAX_ANGLE); 
-        angles.m3 = check_angle(in_msg->param[2], M3_MIN_ANGLE, M3_MAX_ANGLE); 
-        angles.m4 = check_angle(in_msg->param[3], M4_MIN_ANGLE, M4_MAX_ANGLE); 
-        angles.m5 = check_angle(in_msg->param[4], M5_MIN_ANGLE, M5_MAX_ANGLE); 
-        angles.m6 = check_angle(in_msg->param[5], M6_MIN_ANGLE, M6_MAX_ANGLE);
-
-        snprintf_check((char*)set_msg, PARAM_BUFF, "Changed all angles, "
-                 "M1: %d, M2: %d, M3: %d, M4: %d, M5: %d, M6: %d\n", 
-                 angles.m1, angles.m2, angles.m3, angles.m4, angles.m5,
-                 angles.m6);
-        set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE, 
-                       PARAM_STRING, set_msg);
-
-        create_send_msg(&out_msg);
+        check_all_angles(in_msg->param[0], in_msg->param[1], in_msg->param[2],
+                         in_msg->param[3], in_msg->param[4], in_msg->param[5]);
+        send_verbose("Changed all angles, "
+                     "M1: %d, M2: %d, M3: %d, M4: %d, M5: %d, M6: %d\n", 
+                     angles.m1, angles.m2, angles.m3, angles.m4, angles.m5,
+                     angles.m6);
     break;
     default:
         return errno = EINVAL;
@@ -287,6 +257,14 @@ int braccio_arm::send_message(io_msg_s *msg)
     return ret;
 }
 
+void braccio_arm::set_default_pos()
+{
+    // TODO: Insert braccio arm angle changing function
+    send_verbose("Setting arm to default saftey position");
+}
+                    
+                    /* private functions */
+
 uint8_t braccio_arm::check_angle(uint8_t angle, uint8_t min, uint8_t max)
 {
     if (angle < min)
@@ -296,6 +274,17 @@ uint8_t braccio_arm::check_angle(uint8_t angle, uint8_t min, uint8_t max)
         return max;
 
     return angle;
+}
+
+void braccio_arm::check_all_angles(uint8_t a1, uint8_t a2, uint8_t a3, 
+                                   uint8_t a4, uint8_t a5, uint8_t a6)
+{
+    angles.m1 = check_angle(a1, M1_MIN_ANGLE, M1_MAX_ANGLE);
+    angles.m2 = check_angle(a2, M2_MIN_ANGLE, M2_MAX_ANGLE); 
+    angles.m3 = check_angle(a3, M3_MIN_ANGLE, M3_MAX_ANGLE); 
+    angles.m4 = check_angle(a4, M4_MIN_ANGLE, M4_MAX_ANGLE); 
+    angles.m5 = check_angle(a5, M5_MIN_ANGLE, M5_MAX_ANGLE); 
+    angles.m6 = check_angle(a6, M6_MIN_ANGLE, M6_MAX_ANGLE);
 }
 
 int braccio_arm::snprintf_check(char *buff, int size, const char *format, ...)

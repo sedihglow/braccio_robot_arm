@@ -24,8 +24,12 @@ void setup()
 void loop()
 {
     int num_recv = 0;
+    //parsed_msg_s parsed_msg;
     if (Serial.available()) {
         num_recv = Serial.readBytes(serial_in, S_IN_BUFF-1); // room for '\0'
         serial_in[num_recv] = '\0';
+        braccio.parse_msg(serial_in, &parsed_msg);
+        braccio.exec_command(&parsed_msg);
+        braccio.send_verbose("test 1");
     }
 }
