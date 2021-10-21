@@ -1,8 +1,6 @@
 import struct
-from enum import Enum
 
-
-class command_msg:
+class command_interface:
     # message types
     CMD_MSG = 0x0
     PRINT_MSG = 0x1
@@ -22,17 +20,22 @@ class command_msg:
     MX_ANGLE = 0x7
 
     def __init__(self):
-        self._msg = 0
-
+        pass
+        
     def build_cmd_msg(self, cmd, *argv):
+        msg = 0
         arg = argv
 
         if (cmd == self.MX_ANGLE):
-            self._msg = struct.pack("bbbbbbbbb", self.CMD_MSG, cmd, 6, arg[0],
-                                    arg[1], arg[2], arg[3], arg[4], arg[5])
+            msg = struct.pack("9b", self.CMD_MSG, cmd, 6, arg[0],
+                              arg[1], arg[2], arg[3], arg[4], arg[5])
         elif (cmd == self.M1_ANGLE or cmd == self.M2_ANGLE or 
               cmd == self.M3_ANGLE or cmd == self.M4_ANGLE or
               cmd == self.M5_ANGLE or cmd == self.M6_ANGLE):
-            self._msg =  struct.pack("bbbb", self.CMD_MSG, cmd, 1, arg[0])
+            msg =  struct.pack("4b", self.CMD_MSG, cmd, 1, arg[0])
+        
+        return msg
 
-        return self._msg
+    def parse_in_msg(self, msg):
+        pass 
+             
