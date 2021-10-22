@@ -126,6 +126,10 @@ int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type,
         return errno = EINVAL;
     }
 
+    serial.print("param_len: ");
+    serial.print(param_len);
+    serial.print('\n');
+
     fill->param_len = param_len;
     for (i=0, k=0; i < param_len; ++i, ++k)
         fill->param[i] = param[k];
@@ -167,7 +171,7 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
     case M1_ANGLE:
         angles.m1 = check_angle(in_msg->param[0], M1_MIN_ANGLE, M1_MAX_ANGLE);
 
-        send_verbose("Changed M1 angle to %u\n", angles.m1);
+        // send_verbose("Changed M1 angle to %u\n", angles.m1);
     break;
     case M2_ANGLE:
         angles.m2 = check_angle(in_msg->param[0], M2_MIN_ANGLE, M2_MAX_ANGLE); 

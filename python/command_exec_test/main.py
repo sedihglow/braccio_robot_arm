@@ -17,12 +17,9 @@ if __name__ == "__main__":
     arduino_serial.write(msg)
     print("reading message from arduino")
 
-    data = arduino_serial.read_line()
-    print(data)
-
-    data = arduino_serial.read_line()
-
-    print(data)
-
-    data = arduino_serial.read_line()
-    print(data)
+    for i in range(0,6,1):
+        print("read {}".format(i))
+        data = arduino_serial.read_line()
+        print(data)
+        if (data):
+            cmd.parse_in_msg(data)

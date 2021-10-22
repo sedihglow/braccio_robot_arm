@@ -20,7 +20,7 @@ class command_interface:
     MX_ANGLE = 0x7
 
     def __init__(self):
-        pass
+        self._cmsg = 0
         
     def build_cmd_msg(self, cmd, *argv):
         msg = 0
@@ -37,5 +37,18 @@ class command_interface:
         return msg
 
     def parse_in_msg(self, msg):
-        pass 
-             
+        parsed = 0
+        print(msg)
+
+        parsed = struct.unpack("b", msg[0])
+        print(parsed)
+
+        if (parsed[0] != self.CMD_MSG and parsed[0] != self.PRINT_MSG):
+            print("not cmd msg or print msg")
+            return msg
+
+        print(msg)        
+        parsed = struct.unpack("3b", msg[:3])
+        print(parsed)
+        
+        parsed = struct.unpack("3b{}b".format(parsed[2]-1), msg)

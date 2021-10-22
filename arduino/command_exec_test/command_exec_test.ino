@@ -30,6 +30,6 @@ void loop()
         serial_in[num_recv] = '\0';
         braccio.parse_msg(serial_in, &parsed_msg);
         braccio.exec_command(&parsed_msg);
-        braccio.send_verbose("test 1");
+        braccio.send_verbose("test 1\n");
     }
 }
