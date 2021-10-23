@@ -18,6 +18,11 @@ braccio_arm::~braccio_arm()
 {
 }
 
+void braccio_arm::send_ack()
+{
+    serial.print(ACK);
+}
+
 int braccio_arm::send_print(const char *format, ...)
 {
     va_list args;
@@ -26,11 +31,11 @@ int braccio_arm::send_print(const char *format, ...)
 
     va_start(args, format);
 
-    snprintf_check((char*)set_msg, PARAM_BUFF, format, args);
+    vsnprintf_check((char*)set_msg, PARAM_BUFF, format, args);
     set_parsed_msg(&out_msg, PRINT_MSG, PRINT_GENERAL, 
                    PARAM_STRLEN, set_msg);
     if (errno) {
-        send_error("Failed to set parameters in parsed message.");
+        send_error("Failed to set parameters in parsed message.\n");
         errno = SUCCESS;
         return FAILURE;   
     }
@@ -56,18 +61,18 @@ int braccio_arm::send_error(const char *format, ...)
 
     va_start(args, format);
 
-    snprintf_check((char*)set_msg, PARAM_BUFF, format, args);
+    vsnprintf_check((char*)set_msg, PARAM_BUFF, format, args);
     set_parsed_msg(&out_msg, PRINT_MSG, PRINT_ERROR, 
                    PARAM_STRLEN, set_msg);
     if (errno) {
-        send_error("Failed to set parameters in parsed message."); 
+        send_error("Failed to set parameters in parsed message.\n"); 
         errno = SUCCESS;
         return FAILURE;   
     }
 
     create_send_msg(&out_msg);
     if (errno) {
-        send_error("Failed to create and send message");
+        send_error("Failed to create and send message\n");
         errno = 0;
         return FAILURE;
     }
@@ -85,18 +90,19 @@ int braccio_arm::send_verbose(const char *format, ...)
 
     va_start(args, format);
 
-    snprintf_check((char*)set_msg, PARAM_BUFF, format, args);
+    vsnprintf_check((char*)set_msg, PARAM_BUFF, format, args);
+
     set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE, 
                    PARAM_STRLEN, set_msg);
     if (errno) {
-        send_error("Failed to set parameters in parsed message.");
+        send_error("Failed to set parameters in parsed message.\n");
         errno = SUCCESS;
         return FAILURE;   
     }
 
     create_send_msg(&out_msg);
     if (errno) {
-        send_error("Failed to create and send message");
+        send_error("Failed to create and send message\n");
         errno = SUCCESS;
         return FAILURE;
     }
@@ -119,16 +125,12 @@ int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type,
     // If i dont do fill->param_len here compiler complains it may not be init
     fill->param_len = param_len;
     if (param_len == PARAM_STRLEN) { // treat param as string of variable length
-        param_len = strnlen((char*)param, PARAM_BUFF-1) + 1; // for '\0'
-        if (param_len == PARAM_BUFF && param[param_len-1] != '\0')
+        param_len = strnlen((char*)param, PARAM_BUFF); // excludes '\0'
+        if (param_len == PARAM_BUFF && param[param_len-1] != '\n')
             return errno = EINVAL;
     } else if (param_len > PARAM_BUFF) {
         return errno = EINVAL;
     }
-
-    serial.print("param_len: ");
-    serial.print(param_len);
-    serial.print('\n');
 
     fill->param_len = param_len;
     for (i=0, k=0; i < param_len; ++i, ++k)
@@ -171,7 +173,7 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
     case M1_ANGLE:
         angles.m1 = check_angle(in_msg->param[0], M1_MIN_ANGLE, M1_MAX_ANGLE);
 
-        // send_verbose("Changed M1 angle to %u\n", angles.m1);
+        send_verbose("Changed M1 angle to %u\n", angles.m1);
     break;
     case M2_ANGLE:
         angles.m2 = check_angle(in_msg->param[0], M2_MIN_ANGLE, M2_MAX_ANGLE); 
@@ -291,12 +293,10 @@ void braccio_arm::check_all_angles(uint8_t a1, uint8_t a2, uint8_t a3,
     angles.m6 = check_angle(a6, M6_MIN_ANGLE, M6_MAX_ANGLE);
 }
 
-int braccio_arm::snprintf_check(char *buff, int size, const char *format, ...)
+int braccio_arm::vsnprintf_check(char *buff, int size, const char *format,
+                                 va_list args)
 {
-    va_list args;
     int num_written = 0;
-
-    va_start(args, format);
 
     num_written = vsnprintf(buff, size, format, args);
     if (num_written > size-1) { // format was too large for buffer
@@ -304,7 +304,5 @@ int braccio_arm::snprintf_check(char *buff, int size, const char *format, ...)
         return FAILURE;
     }
 
-    va_end(args);
-    
     return SUCCESS;
 }

@@ -1,9 +1,14 @@
 import struct
+import sys
 
 class command_interface:
+    # reserved msg type and command type
+    RESERVED = 0xA # '\n'
+
     # message types
     CMD_MSG = 0x0
     PRINT_MSG = 0x1
+    ACK = 0xA # '\n' was sent as message type
 
     # incomming message command
     PRINT_GENERAL = 0x0
@@ -18,9 +23,16 @@ class command_interface:
     M5_ANGLE = 0x5
     M6_ANGLE = 0x6
     MX_ANGLE = 0x7
+    
+    def __init__(self, verbose):
+        self.verbose = verbose 
+    
+    def sys_print(self, msg):
+        sys.stdout.write(msg)
 
-    def __init__(self):
-        self._cmsg = 0
+    def print_verbose(self, msg):
+        if (self.verbose):
+            self.sys_print(msg) # prints the string without adding '\n'
         
     def build_cmd_msg(self, cmd, *argv):
         msg = 0
@@ -38,17 +50,53 @@ class command_interface:
 
     def parse_in_msg(self, msg):
         parsed = 0
-        print(msg)
 
         parsed = struct.unpack("b", msg[0])
-        print(parsed)
+        if (parsed[0] == self.ACK):
+            return parsed
 
-        if (parsed[0] != self.CMD_MSG and parsed[0] != self.PRINT_MSG):
-            print("not cmd msg or print msg")
-            return msg
-
-        print(msg)        
         parsed = struct.unpack("3b", msg[:3])
-        print(parsed)
+        parsed = struct.unpack("3b{}s".format(parsed[2]), msg)
+
+        return parsed
+
+    def exec_command(self, p_msg):
+        i = 0
+
+        msg_type = p_msg[i]
+        i += 1
+
+        if (msg_type != self.CMD_MSG):
+            print("ERROR: not command message")
+            return
+
+        cmd = p_msg[i]
+        i += 1
+        param_len = p_msg[i]
+        i += 1
         
-        parsed = struct.unpack("3b{}b".format(parsed[2]-1), msg)
+        # NOTE: currently no commands implemented
+
+    def exec_print(self, p_msg):
+        i = 0
+
+        msg_type = p_msg[i]
+        if (msg_type != self.PRINT_MSG):
+            print("ERROR: not print message\n")
+            return
+
+        i += 1
+        cmd = p_msg[i]
+
+        i += 1
+        param_len = p_msg[i] # includes '\n'
+
+        i += 1
+        to_print = p_msg[i] # include '\n'
+        
+        if (cmd == self.PRINT_GENERAL):
+            self.sys_print(to_print)
+        elif (cmd == self.PRINT_ERROR):
+            self.sys_print("BOARD ERROR: {}".format(to_print))
+        elif (cmd == self.PRINT_VERBOSE):
+            self.print_verbose(to_print)

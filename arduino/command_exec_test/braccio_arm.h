@@ -15,6 +15,7 @@
 // msg type definitions
 #define CMD_MSG 0x0
 #define PRINT_MSG 0x1
+#define ACK '\n' // 0xA only char so it can be used with serial.print()
 
 // outgoing cmd definitions
 #define PRINT_GENERAL 0x0
@@ -53,6 +54,7 @@ enum servo_angle_cmd {
     MX_ANGLE    // braccio_arm for all servo angles at once
 };
 
+
 typedef struct parsed_io_msg {
     uint8_t msg_type;
     uint8_t cmd;
@@ -78,13 +80,14 @@ class braccio_arm {
     public:
         braccio_arm(Stream &serial); 
         ~braccio_arm();
-
+    
         int set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type, uint8_t cmd,
                            uint8_t param_len, uint8_t *param);
         
         int parse_msg(uint8_t *msg, parsed_msg_s *in_msg);
         int exec_command(parsed_msg_s *in_msg);
         
+        void send_ack();
         int send_print(const char *format, ...);
         int send_verbose(const char *format, ...);
         int send_error(const char *format, ...);
@@ -99,7 +102,8 @@ class braccio_arm {
         uint8_t check_angle(uint8_t angle, uint8_t min, uint8_t max);
         void check_all_angles(uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4,
                               uint8_t a5, uint8_t a6);
-        int snprintf_check(char *buff, int size, const char *format, ...);
+        int vsnprintf_check(char *buff, int size, const char *format, 
+                            va_list args); 
         
         Stream &serial;
         braccio_angles_s angles;
