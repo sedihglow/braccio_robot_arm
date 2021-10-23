@@ -31,5 +31,6 @@ void loop()
         braccio.send_ack();
         braccio.parse_msg(serial_in, &parsed_msg);
         braccio.exec_command(&parsed_msg);
+        braccio.send_error("test 1\n");
     }
 }

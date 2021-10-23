@@ -2,13 +2,10 @@ import struct
 import sys
 
 class command_interface:
-    # reserved msg type and command type
-    RESERVED = 0xA # '\n'
-
     # message types
     CMD_MSG = 0x0
     PRINT_MSG = 0x1
-    ACK = 0xA # '\n' was sent as message type
+    ACK = 0x2
 
     # incomming message command
     PRINT_GENERAL = 0x0
@@ -50,13 +47,17 @@ class command_interface:
 
     def parse_in_msg(self, msg):
         parsed = 0
-
-        parsed = struct.unpack("b", msg[0])
+        
+        parsed = struct.unpack("b", msg[0:1])
         if (parsed[0] == self.ACK):
             return parsed
-
+        
         parsed = struct.unpack("3b", msg[:3])
-        parsed = struct.unpack("3b{}s".format(parsed[2]), msg)
+        
+        if (parsed[0] == self.PRINT_MSG):
+            parsed = struct.unpack("3b{}s".format(parsed[2]), msg)
+        elif(parsed[0] == self.CMD_MSG):
+            parsed = struct.unpack("3b{}b".format(parsed[2]), msg)
 
         return parsed
 
@@ -95,8 +96,8 @@ class command_interface:
         to_print = p_msg[i] # include '\n'
         
         if (cmd == self.PRINT_GENERAL):
-            self.sys_print(to_print)
+            self.sys_print(to_print.decode())
         elif (cmd == self.PRINT_ERROR):
-            self.sys_print("BOARD ERROR: {}".format(to_print))
+            self.sys_print("BOARD ERROR: {}".format(to_print.decode()))
         elif (cmd == self.PRINT_VERBOSE):
-            self.print_verbose(to_print)
+            self.print_verbose(to_print.decode())

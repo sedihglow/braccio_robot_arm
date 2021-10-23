@@ -15,7 +15,7 @@
 // msg type definitions
 #define CMD_MSG 0x0
 #define PRINT_MSG 0x1
-#define ACK '\n' // 0xA only char so it can be used with serial.print()
+#define ACK 0x2
 
 // outgoing cmd definitions
 #define PRINT_GENERAL 0x0

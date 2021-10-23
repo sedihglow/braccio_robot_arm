@@ -20,7 +20,9 @@ braccio_arm::~braccio_arm()
 
 void braccio_arm::send_ack()
 {
-    serial.print(ACK);
+    uint8_t ack[2] = {ACK, '\n'};
+    serial.write(ack, 2);
+
 }
 
 int braccio_arm::send_print(const char *format, ...)
