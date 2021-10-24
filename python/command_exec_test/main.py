@@ -20,6 +20,17 @@ def read_exec(cmd, arduino_serial):
             elif(p_msg[0] == cmd.CMD_MSG):
                 cmd.exec_command(p_msg)
 
+def print_cmd_menu():
+    print("Choose angle to set\n"
+          "1. m1, base\n"
+          "2. m2, shoulder\n"
+          "3. m3, elbow\n"
+          "4. m4, wrist vertical\n"
+          "5. m5, write rotation\n"
+          "6. m6, gripper\n"
+          "7. All angles")
+    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Interface to test commands to"
                                                  "arduino through serial")
@@ -37,3 +48,8 @@ if __name__ == "__main__":
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
         future = executor.submit(read_exec, cmd, arduino_serial)
+        print_cmd_menu()
+        change_angle = input("Enter number: ")
+        change_angle = int(change_angle)
+        print(change_angle)
+
