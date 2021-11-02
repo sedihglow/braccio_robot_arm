@@ -6,6 +6,7 @@ class command_interface:
     CMD_MSG = 0x0
     PRINT_MSG = 0x1
     ACK = 0x2
+    FINISH = 0x3
 
     # incomming message command
     PRINT_GENERAL = 0x0
@@ -36,28 +37,30 @@ class command_interface:
         arg = argv
 
         if (cmd == self.MX_ANGLE):
-            msg = struct.pack("9b", self.CMD_MSG, cmd, 6, arg[0],
+            msg = struct.pack("9B", self.CMD_MSG, cmd, 6, arg[0],
                               arg[1], arg[2], arg[3], arg[4], arg[5])
         elif (cmd == self.M1_ANGLE or cmd == self.M2_ANGLE or 
               cmd == self.M3_ANGLE or cmd == self.M4_ANGLE or
               cmd == self.M5_ANGLE or cmd == self.M6_ANGLE):
-            msg =  struct.pack("4b", self.CMD_MSG, cmd, 1, arg[0])
+            msg =  struct.pack("4B", self.CMD_MSG, cmd, 1, arg[0])
         
         return msg
 
     def parse_in_msg(self, msg):
         parsed = 0
         
-        parsed = struct.unpack("b", msg[0:1])
+        parsed = struct.unpack("B", msg[0:1])
         if (parsed[0] == self.ACK):
             return parsed
+        elif (parsed[0] == self.FINISH):
+            return parsed
         
-        parsed = struct.unpack("3b", msg[:3])
+        parsed = struct.unpack("3B", msg[:3])
         
         if (parsed[0] == self.PRINT_MSG):
-            parsed = struct.unpack("3b{}s".format(parsed[2]), msg)
+            parsed = struct.unpack("3B{}s".format(parsed[2]), msg)
         elif(parsed[0] == self.CMD_MSG):
-            parsed = struct.unpack("3b{}b".format(parsed[2]), msg)
+            parsed = struct.unpack("3B{}B".format(parsed[2]), msg)
 
         return parsed
 
@@ -68,7 +71,7 @@ class command_interface:
         i += 1
 
         if (msg_type != self.CMD_MSG):
-            print("ERROR: not command message")
+            print("ERROR: not command message in exec_command")
             return
 
         cmd = p_msg[i]
@@ -83,7 +86,7 @@ class command_interface:
 
         msg_type = p_msg[i]
         if (msg_type != self.PRINT_MSG):
-            print("ERROR: not print message\n")
+            print("ERROR: not print message in exec_print\n")
             return
 
         i += 1

@@ -8,17 +8,21 @@ SERIAL_PORT = "/dev/ttyACM0"
 RTIMEOUT = 0.5 # read serial timeout
 
 def read_exec(cmd, arduino_serial):
-    print("reading messages from arduino")
-    while (True):
-        read = arduino_serial.read_line()
-        if (read):
-            p_msg = cmd.parse_in_msg(read)
-            if (p_msg[0] == cmd.ACK):
-                print("ACK recieved")
-            elif (p_msg[0] == cmd.PRINT_MSG):
-                cmd.exec_print(p_msg)
-            elif(p_msg[0] == cmd.CMD_MSG):
-                cmd.exec_command(p_msg)
+    read = arduino_serial.read_line()
+    if (read):
+        p_msg = cmd.parse_in_msg(read)
+        if (p_msg[0] == cmd.ACK):
+            print("ACK recieved")
+            return 0;
+        elif (p_msg[0] == cmd.PRINT_MSG):
+            cmd.exec_print(p_msg)
+            return 0;
+        elif(p_msg[0] == cmd.CMD_MSG):
+            cmd.exec_command(p_msg)
+            return 0;
+        elif(p_msg[0] == cmd.FINISH):
+            print("Arduino finished sending message");
+            return 1;
 
 def print_cmd_menu():
     print("Choose angle to set\n"
@@ -28,8 +32,46 @@ def print_cmd_menu():
           "4. m4, wrist vertical\n"
           "5. m5, write rotation\n"
           "6. m6, gripper\n"
-          "7. All angles")
+          "7. All angles\n"
+          "8. exit")
+
+def user_input(cmd, arduino_serial):
+    print_cmd_menu()
+    change_angle = input("Enter number: ")
+    change_angle = int(change_angle)
+
+    if (change_angle > 8 or change_angle < 1):
+        print("Invalid Input")
+        return 0
+
+    if (change_angle == 8):
+            print("exit program")
+            return 1
     
+    if (change_angle == 7):
+        a1, a2, a3, a4, a5, a6 = input("Enter angles: ").split()
+        a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), int(a5),
+                                  int(a6)]
+        msg = cmd.build_cmd_msg(cmd.MX_ANGLE, a1, a2, a3, a4, a5, a6)
+        arduino_serial.write(msg)
+    else:
+        angle = input("Enter angle: ")
+        angle = int(angle)
+        if (change_angle == 1):
+            msg = cmd.build_cmd_msg(cmd.M1_ANGLE, angle)
+        elif (change_angle == 2):
+            msg = cmd.build_cmd_msg(cmd.M2_ANGLE, angle)
+        elif (change_angle == 3):
+            msg = cmd.build_cmd_msg(cmd.M3_ANGLE, angle)
+        elif (change_angle == 4):
+            msg = cmd.build_cmd_msg(cmd.M4_ANGLE, angle)
+        elif (change_angle == 5):
+            msg = cmd.build_cmd_msg(cmd.M5_ANGLE, angle)
+        elif (change_angle == 6):
+            msg = cmd.build_cmd_msg(cmd.M6_ANGLE, angle)
+
+        arduino_serial.write(msg)
+    return 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Interface to test commands to"
@@ -42,14 +84,22 @@ if __name__ == "__main__":
     arduino_serial.begin()
     cmd = command_interface(cl_args.verbose)
 
-    msg = cmd.build_cmd_msg(cmd.MX_ANGLE, 45, 45, 10, 45, 45, 45) 
+    #msg = cmd.build_cmd_msg(cmd.MX_ANGLE, 45, 45, 10, 45, 45, 45) 
 
-    arduino_serial.write(msg)
+    #arduino_serial.write(msg)
+    
+    try:
+        exit = 0
+        while (not exit):
+            exit = user_input(cmd, arduino_serial)
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        future = executor.submit(read_exec, cmd, arduino_serial)
-        print_cmd_menu()
-        change_angle = input("Enter number: ")
-        change_angle = int(change_angle)
-        print(change_angle)
+            print("reading messages from arduino")
+            finished = 0
+            while (not finished and not exit):
+                finished = read_exec(cmd, arduino_serial)
+    except KeyboardInterrupt:
+        print("exiting...")
+    finally:
+        print("exiting...")
+        
 

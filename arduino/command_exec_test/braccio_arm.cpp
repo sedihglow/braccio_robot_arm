@@ -3,6 +3,15 @@
 #define SUCCESS 0
 #define FAILURE -1
 
+// these must be declared for extern variables in the Braccio library
+// in Braccio.cpp 
+Servo base;
+Servo shoulder;
+Servo elbow;
+Servo wrist_ver;
+Servo wrist_rot;
+Servo gripper;
+
 braccio_arm::braccio_arm(Stream &serial): serial(serial)
 {
     // set default angles into saftey position
@@ -18,11 +27,44 @@ braccio_arm::~braccio_arm()
 {
 }
 
+// initialize robot arm to default position and sets variables in braccio
+void braccio_arm::init_arm(int soft_start_level)
+{
+    braccio.begin(soft_start_level);
+}
+
+void braccio_arm::set_default_pos()
+{
+    send_verbose("Setting arm to default saftey position");
+    braccio.ServoMovement(DFLT_STEP_DELAY, M1_SAFE_ANGLE, M2_SAFE_ANGLE,
+                          M3_SAFE_ANGLE, M4_SAFE_ANGLE, M5_SAFE_ANGLE,
+                          M6_SAFE_ANGLE);
+}
+
+bool braccio_arm::serial_avail()
+{
+    if (serial.available())
+        return true;
+    return false;
+}
+
+void braccio_arm::serial_read(uint8_t *buff, size_t len)
+{
+    int num_recv;
+    num_recv = serial.readBytes(buff, len-1); // room for '\0'
+    buff[num_recv] = '\0';
+}
+
 void braccio_arm::send_ack()
 {
     uint8_t ack[2] = {ACK, '\n'};
     serial.write(ack, 2);
+}
 
+void braccio_arm::send_finish()
+{
+    uint8_t finish[2] = {FINISH, '\n'};
+    serial.write(finish, 2);
 }
 
 int braccio_arm::send_print(const char *format, ...)
@@ -165,7 +207,6 @@ int braccio_arm::parse_msg(uint8_t *msg, parsed_msg_s *in_msg)
     return SUCCESS;
 }
 
-/* TODO: Insert braccio arm angle changing function in each case */
 int braccio_arm::exec_command(parsed_msg_s *in_msg)
 {
     if (in_msg->msg_type != CMD_MSG)
@@ -174,43 +215,52 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
     switch (in_msg->cmd) {
     case M1_ANGLE:
         angles.m1 = check_angle(in_msg->param[0], M1_MIN_ANGLE, M1_MAX_ANGLE);
-
+        braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
+                              angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M1 angle to %u\n", angles.m1);
     break;
     case M2_ANGLE:
         angles.m2 = check_angle(in_msg->param[0], M2_MIN_ANGLE, M2_MAX_ANGLE); 
-
+        braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
+                              angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M2 angle to %u\n", angles.m2);
     break;
     case M3_ANGLE:
         angles.m3 = check_angle(in_msg->param[0], M3_MIN_ANGLE, M3_MAX_ANGLE); 
-
+        braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
+                              angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M3 angle to %u\n", angles.m3);
     break;
     case M4_ANGLE:
         angles.m4 = check_angle(in_msg->param[0], M4_MIN_ANGLE, M4_MAX_ANGLE); 
-
+        braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
+                              angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M4 angle to %u\n", angles.m4);
     break;
     case M5_ANGLE:
         angles.m5 = check_angle(in_msg->param[0], M5_MIN_ANGLE, M5_MAX_ANGLE); 
-
+        braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
+                              angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M5 angle to %u\n", angles.m5);
     break;
     case M6_ANGLE:
         angles.m6 = check_angle(in_msg->param[0], M6_MIN_ANGLE, M6_MAX_ANGLE); 
-
+        braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
+                              angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M6 angle to %u\n", angles.m6);
     break;
     case MX_ANGLE:
         check_all_angles(in_msg->param[0], in_msg->param[1], in_msg->param[2],
                          in_msg->param[3], in_msg->param[4], in_msg->param[5]);
+        braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
+                              angles.m4, angles.m5, angles.m6);
         send_verbose("Changed all angles, "
                      "M1: %d, M2: %d, M3: %d, M4: %d, M5: %d, M6: %d\n", 
                      angles.m1, angles.m2, angles.m3, angles.m4, angles.m5,
                      angles.m6);
     break;
     default:
+        send_verbose("Invalid command recieved.\n");
         return errno = EINVAL;
     }
 
@@ -265,12 +315,6 @@ int braccio_arm::send_message(io_msg_s *msg)
     return ret;
 }
 
-void braccio_arm::set_default_pos()
-{
-    // TODO: Insert braccio arm angle changing function
-    send_verbose("Setting arm to default saftey position");
-}
-                    
                     /* private functions */
 
 uint8_t braccio_arm::check_angle(uint8_t angle, uint8_t min, uint8_t max)
