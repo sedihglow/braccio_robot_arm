@@ -30,15 +30,18 @@ braccio_arm::~braccio_arm()
 // initialize robot arm to default position and sets variables in braccio
 void braccio_arm::init_arm(int soft_start_level)
 {
+    send_verbose("Starting Braccio\n");
     braccio.begin(soft_start_level);
+    set_default_pos();
 }
 
 void braccio_arm::set_default_pos()
 {
-    send_verbose("Setting arm to default saftey position");
+    send_verbose("setting default position\n");
     braccio.ServoMovement(DFLT_STEP_DELAY, M1_SAFE_ANGLE, M2_SAFE_ANGLE,
                           M3_SAFE_ANGLE, M4_SAFE_ANGLE, M5_SAFE_ANGLE,
                           M6_SAFE_ANGLE);
+    send_verbose("default position set\n");
 }
 
 bool braccio_arm::serial_avail()
@@ -48,11 +51,11 @@ bool braccio_arm::serial_avail()
     return false;
 }
 
-void braccio_arm::serial_read(uint8_t *buff, size_t len)
+int braccio_arm::serial_read(uint8_t *buff, size_t len)
 {
     int num_recv;
-    num_recv = serial.readBytes(buff, len-1); // room for '\0'
-    buff[num_recv] = '\0';
+    num_recv = serial.readBytes(buff, len); // room for '\0'
+    return num_recv;
 }
 
 void braccio_arm::send_ack()
@@ -162,7 +165,7 @@ int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type,
 {
     int i;
     int k;
-
+    
     fill->msg_type = msg_type;
     fill->cmd = cmd;
     
@@ -179,6 +182,8 @@ int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type,
     fill->param_len = param_len;
     for (i=0, k=0; i < param_len; ++i, ++k)
         fill->param[i] = param[k];
+    
+    fill->msg_size = param_len + MSG_SIZE_NO_PARAM;
 
     return SUCCESS;
 }
@@ -286,6 +291,7 @@ int braccio_arm::create_io_msg(parsed_msg_s *msg, io_msg_s *io_msg)
     uint8_t i = 0;
     uint8_t k = 0;
 
+    io_msg->msg[i++] = msg->msg_size;
     io_msg->msg[i++] = msg->msg_type;
     io_msg->msg[i++] = msg->cmd;
     
