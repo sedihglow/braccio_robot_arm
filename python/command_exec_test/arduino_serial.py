@@ -21,8 +21,8 @@ class arduino_com:
         self.arduino.write(msg) 
         time.sleep(delay)
 
-    def read(self, delay=0.1):
-        reading = self.arduino.read()
+    def read(self, size=1, delay=0.1):
+        reading = self.arduino.read(size)
         time.sleep(delay)
         return reading
 
@@ -30,3 +30,4 @@ class arduino_com:
         reading = self.arduino.readline()
         time.sleep(delay)
         return reading
+    

@@ -21,8 +21,8 @@ void setup()
     
     // initialize the robot arm, goes to default position
     braccio.init_arm();
-
-    Serial.print("Setup Complete\n"); // let serial com know setup complete
+    
+    braccio.send_verbose("Setup Complete\n");
 }
 
 void loop()

@@ -8,8 +8,10 @@ SERIAL_PORT = "/dev/ttyACM0"
 RTIMEOUT = 0.5 # read serial timeout
 
 def read_exec(cmd, arduino_serial):
-    read = arduino_serial.read_line()
+    read = arduino_serial.read()
     if (read):
+        msg_size = int.from_bytes(read, byteorder="little", signed=False)
+        read = arduino_serial.read(msg_size)
         p_msg = cmd.parse_in_msg(read)
         if (p_msg[0] == cmd.ACK):
             print("ACK recieved")
@@ -84,10 +86,6 @@ if __name__ == "__main__":
     arduino_serial.begin()
     cmd = command_interface(cl_args.verbose)
 
-    #msg = cmd.build_cmd_msg(cmd.MX_ANGLE, 45, 45, 10, 45, 45, 45) 
-
-    #arduino_serial.write(msg)
-    
     try:
         exit = 0
         while (not exit):

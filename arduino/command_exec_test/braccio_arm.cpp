@@ -60,13 +60,13 @@ int braccio_arm::serial_read(uint8_t *buff, size_t len)
 
 void braccio_arm::send_ack()
 {
-    uint8_t ack[2] = {ACK, '\n'};
+    uint8_t ack[2] = {1, ACK};
     serial.write(ack, 2);
 }
 
 void braccio_arm::send_finish()
 {
-    uint8_t finish[2] = {FINISH, '\n'};
+    uint8_t finish[2] = {1, FINISH};
     serial.write(finish, 2);
 }
 
@@ -182,8 +182,9 @@ int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type,
     fill->param_len = param_len;
     for (i=0, k=0; i < param_len; ++i, ++k)
         fill->param[i] = param[k];
-    
-    fill->msg_size = param_len + MSG_SIZE_NO_PARAM;
+        
+    // exclude msg_size in size so reciever can parse 1 byte then parse the rest
+    fill->msg_size = param_len + MSG_SIZE_NO_PARAM - 1; 
 
     return SUCCESS;
 }

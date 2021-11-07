@@ -1,3 +1,7 @@
+# NOTE: read_exec is outdated and changed in main.py that is not threaded. It
+# will need to be migrated to here after changed to the message format from the
+# arduino
+
 from arduino_serial import arduino_com
 from command import command_interface
 import argparse
