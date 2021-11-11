@@ -9,8 +9,8 @@
 
 #define DFLT_STEP_DELAY 20 // ms
 
-#define MSG_SIZE_NO_PARAM 4 // msg_len, msg_type, cmd, param_len, 3 bytes
-#define PARAM_BUFF 250
+#define MSG_SIZE_NO_PARAM 4 // msg_len, msg_type, cmd, param_len, 4 bytes
+#define PARAM_BUFF 150
 #define IO_MSG_BUFF (MSG_SIZE_NO_PARAM + PARAM_BUFF)
 
 #define PARAM_STRLEN 0
@@ -25,6 +25,17 @@
 #define PRINT_GENERAL 0x0
 #define PRINT_ERROR 0x1
 #define PRINT_VERBOSE 0x2
+#define SEND_ANGLES 0x3
+
+// incomming cammands
+#define M1_ANGLE 0x1 // base
+#define M2_ANGLE 0x2 // shoulder
+#define M3_ANGLE 0x3 // elbow
+#define M4_ANGLE 0x4 // wrist vertial
+#define M5_ANGLE 0x5 // wrist rotation
+#define M6_ANGLE 0x6 // gripper
+#define MX_ANGLE 0x7 // braccio_arm for all servo angles at once
+#define REQUEST_MX_ANGLE 0x8 // requesting all angles to be sent
 
 // min max angles
 #define M1_MIN_ANGLE 0
@@ -53,16 +64,6 @@
 #define M5_SAFE_ANGLE 90
 #define M6_SAFE_ANGLE 73
 
-enum servo_angle_cmd {
-    M1_ANGLE=1, // base
-    M2_ANGLE,   // shoulder
-    M3_ANGLE,   // elbow
-    M4_ANGLE,   // wrist vertial
-    M5_ANGLE,   // wrist rotation
-    M6_ANGLE,   // gripper
-    MX_ANGLE    // braccio_arm for all servo angles at once
-};
-
 typedef struct parsed_io_msg {
     uint8_t msg_size;
     uint8_t msg_type;
@@ -76,6 +77,7 @@ typedef struct io_msg {
     uint8_t len;
 } io_msg_s;
 
+#define NUM_ANGLES 6 // m[1-6]
 typedef struct braccio_angles {
     uint8_t m1;
     uint8_t m2;
@@ -107,7 +109,8 @@ class braccio_arm {
         int send_print(const char *format, ...);
         int send_verbose(const char *format, ...);
         int send_error(const char *format, ...);
-        
+        int send_all_angles(); 
+
         int create_send_msg(parsed_msg_s *msg);
         int create_io_msg(parsed_msg_s *msg, io_msg_s *io_msg);
         int send_message(io_msg_s *msg);

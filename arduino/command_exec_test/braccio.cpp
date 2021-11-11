@@ -201,6 +201,7 @@ int _Braccio::ServoMovement(int stepDelay, int vBase, int vShoulder, int vElbow,
          * sense it works after the first pass. The issue can be seen when
          * going to default positions after begin() is called.
          *
+         * Changing it makes the code not run on the arduino.
          */
 		if (vWrist_ver != step_wrist_rot) 
 		{

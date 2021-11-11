@@ -38,9 +38,17 @@ void braccio_arm::init_arm(int soft_start_level)
 void braccio_arm::set_default_pos()
 {
     send_verbose("setting default position\n");
-    braccio.ServoMovement(DFLT_STEP_DELAY, M1_SAFE_ANGLE, M2_SAFE_ANGLE,
-                          M3_SAFE_ANGLE, M4_SAFE_ANGLE, M5_SAFE_ANGLE,
-                          M6_SAFE_ANGLE);
+
+    angles.m1 = M1_SAFE_ANGLE;
+    angles.m2 = M2_SAFE_ANGLE;
+    angles.m3 = M3_SAFE_ANGLE;
+    angles.m4 = M4_SAFE_ANGLE;
+    angles.m5 = M5_SAFE_ANGLE;
+    angles.m6 = M6_SAFE_ANGLE;
+
+    braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
+                          angles.m4, angles.m5, angles.m6);
+
     send_verbose("default position set\n");
 }
 
@@ -56,6 +64,29 @@ int braccio_arm::serial_read(uint8_t *buff, size_t len)
     int num_recv;
     num_recv = serial.readBytes(buff, len); // room for '\0'
     return num_recv;
+}
+
+int braccio_arm::send_all_angles()
+{
+    parsed_msg_s out_msg;
+    uint8_t param[NUM_ANGLES] = {angles.m1, angles.m2, angles.m3, angles.m4,
+                                 angles.m5, angles.m6};
+
+    set_parsed_msg(&out_msg, CMD_MSG, SEND_ANGLES, NUM_ANGLES, param);
+    if (errno) {
+        send_error("Failed to set parameters in parsed message.\n"); 
+        errno = SUCCESS;
+        return FAILURE;   
+    }
+
+    create_send_msg(&out_msg);
+    if (errno) {
+        send_error("Failed to create and send message");
+        errno = SUCCESS;
+        return FAILURE;
+    }
+
+    return SUCCESS;
 }
 
 void braccio_arm::send_ack()
@@ -90,7 +121,7 @@ int braccio_arm::send_print(const char *format, ...)
     create_send_msg(&out_msg);
     if (errno) {
         send_error("Failed to create and send message");
-        errno = 0;
+        errno = SUCCESS;
         return FAILURE;
     }
 
@@ -120,7 +151,7 @@ int braccio_arm::send_error(const char *format, ...)
     create_send_msg(&out_msg);
     if (errno) {
         send_error("Failed to create and send message\n");
-        errno = 0;
+        errno = SUCCESS;
         return FAILURE;
     }
 
@@ -209,6 +240,9 @@ int braccio_arm::parse_msg(uint8_t *msg, parsed_msg_s *in_msg)
     // parse parameters
     for (k=0; k < in_msg->param_len; ++k)
         in_msg->param[k] = msg[i++];
+    
+    // this is not sent by the python code but is set for initialization
+    in_msg->msg_size = in_msg->param_len + MSG_SIZE_NO_PARAM - 1;
 
     return SUCCESS;
 }
@@ -265,6 +299,13 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
                      angles.m1, angles.m2, angles.m3, angles.m4, angles.m5,
                      angles.m6);
     break;
+    case REQUEST_MX_ANGLE:
+        send_all_angles(); 
+        send_verbose("Sent all angles, "
+                     "M1: %d, M2: %d, M3: %d, M4: %d, M5: %d, M6: %d\n", 
+                     angles.m1, angles.m2, angles.m3, angles.m4, angles.m5,
+                     angles.m6);
+    break; 
     default:
         send_verbose("Invalid command recieved.\n");
         return errno = EINVAL;

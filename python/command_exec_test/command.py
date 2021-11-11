@@ -12,6 +12,7 @@ class command_interface:
     PRINT_GENERAL = 0x0
     PRINT_ERROR = 0x1
     PRINT_VERBOSE = 0x2
+    SEND_ANGLES = 0x3
 
     # outgoing message command
     M1_ANGLE = 0x1
@@ -21,6 +22,9 @@ class command_interface:
     M5_ANGLE = 0x5
     M6_ANGLE = 0x6
     MX_ANGLE = 0x7
+    REQUEST_MX_ANGLE = 0x8
+
+    
     
     def __init__(self, verbose):
         self.verbose = verbose 
@@ -43,6 +47,8 @@ class command_interface:
               cmd == self.M3_ANGLE or cmd == self.M4_ANGLE or
               cmd == self.M5_ANGLE or cmd == self.M6_ANGLE):
             msg =  struct.pack("4B", self.CMD_MSG, cmd, 1, arg[0])
+        elif (cmd == self.REQUEST_MX_ANGLE):
+            msg = struct.pack("3B", self.CMD_MSG, cmd, 0)
         
         return msg
 
@@ -66,6 +72,7 @@ class command_interface:
 
     def exec_command(self, p_msg):
         i = 0
+        param = []
 
         msg_type = p_msg[i]
         i += 1
@@ -76,10 +83,16 @@ class command_interface:
 
         cmd = p_msg[i]
         i += 1
+        
         param_len = p_msg[i]
         i += 1
-        
-        # NOTE: currently no commands implemented
+
+        for k in range(0,param_len):
+            param.append(p_msg[i])
+            i += 1
+
+        if (cmd == self.SEND_ANGLES):
+            print(param)
 
     def exec_print(self, p_msg):
         i = 0

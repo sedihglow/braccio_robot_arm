@@ -35,18 +35,19 @@ def print_cmd_menu():
           "5. m5, write rotation\n"
           "6. m6, gripper\n"
           "7. All angles\n"
-          "8. exit")
+          "8. Request all angles\n"
+          "9. exit")
 
 def user_input(cmd, arduino_serial):
     print_cmd_menu()
     change_angle = input("Enter number: ")
     change_angle = int(change_angle)
 
-    if (change_angle > 8 or change_angle < 1):
+    if (change_angle > 9 or change_angle < 1):
         print("Invalid Input")
         return 0
 
-    if (change_angle == 8):
+    if (change_angle == 9):
             print("exit program")
             return 1
     
@@ -56,6 +57,8 @@ def user_input(cmd, arduino_serial):
                                   int(a6)]
         msg = cmd.build_cmd_msg(cmd.MX_ANGLE, a1, a2, a3, a4, a5, a6)
         arduino_serial.write(msg)
+    elif (change_angle == 9):
+        msg = cmd.buid_cmd_msg(cmd.REQUEST_MX_ANGLE)
     else:
         angle = input("Enter angle: ")
         angle = int(angle)
