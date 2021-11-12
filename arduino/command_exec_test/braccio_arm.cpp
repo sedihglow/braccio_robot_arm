@@ -306,6 +306,8 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
                      angles.m1, angles.m2, angles.m3, angles.m4, angles.m5,
                      angles.m6);
     break; 
+    case SET_DFLT_POS:
+        set_default_pos();
     default:
         send_verbose("Invalid command recieved.\n");
         return errno = EINVAL;

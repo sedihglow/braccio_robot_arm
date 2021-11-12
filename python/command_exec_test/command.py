@@ -23,8 +23,7 @@ class command_interface:
     M6_ANGLE = 0x6
     MX_ANGLE = 0x7
     REQUEST_MX_ANGLE = 0x8
-
-    
+    SET_DFLT_POS = 0x9
     
     def __init__(self, verbose):
         self.verbose = verbose 
@@ -48,6 +47,8 @@ class command_interface:
               cmd == self.M5_ANGLE or cmd == self.M6_ANGLE):
             msg =  struct.pack("4B", self.CMD_MSG, cmd, 1, arg[0])
         elif (cmd == self.REQUEST_MX_ANGLE):
+            msg = struct.pack("3B", self.CMD_MSG, cmd, 0)
+        elif (cmd == self.SET_DFLT_POS):
             msg = struct.pack("3B", self.CMD_MSG, cmd, 0)
         
         return msg

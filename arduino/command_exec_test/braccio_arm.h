@@ -36,6 +36,7 @@
 #define M6_ANGLE 0x6 // gripper
 #define MX_ANGLE 0x7 // braccio_arm for all servo angles at once
 #define REQUEST_MX_ANGLE 0x8 // requesting all angles to be sent
+#define SET_DFLT_POS 0x9
 
 // min max angles
 #define M1_MIN_ANGLE 0
