@@ -14,8 +14,6 @@ class arduino_com:
                                      timeout=self.rtimeout)
         # arduino resets after serial connection, wait for arduino to setup 
         time.sleep(delay)
-        while (not self.read_line()):
-            pass
 
     def write(self, msg, delay=0.05):
         self.arduino.write(msg) 

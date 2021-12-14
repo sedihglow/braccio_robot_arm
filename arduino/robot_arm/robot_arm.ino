@@ -23,6 +23,7 @@ void setup()
     braccio.init_arm();
     
     braccio.send_verbose("Setup Complete\n");
+    braccio.send_finish();
 }
 
 void loop()

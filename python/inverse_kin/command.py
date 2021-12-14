@@ -118,3 +118,5 @@ class command_interface:
             self.sys_print("BOARD ERROR: {}".format(to_print.decode()))
         elif (cmd == self.PRINT_VERBOSE):
             self.print_verbose(to_print.decode())
+
+
