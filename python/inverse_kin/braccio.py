@@ -16,11 +16,15 @@ class braccio_interface:
 
         # get setup messages to confirm Arduino is on
         self.read_exec()
+
+        print("finished first read")
         
         # init angles from Arduino
         msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
         self.arduino_serial.write(msg)
+        print("request sent")
         self.read_exec()
+        print("end final read exec")
 
     def read_exec(self):
         finished = False
@@ -40,8 +44,6 @@ class braccio_interface:
                 elif(p_msg[0] == self.cmd.FINISH):
                     print("Arduino finished sending message")
                     finished = True
-            else:
-                finished = True
 
     def print_cmd_menu(self):
         print("Choose angle to set\n"
