@@ -71,7 +71,7 @@ class command_interface:
 
         return parsed
 
-    def exec_command(self, p_msg):
+    def exec_command(self, p_msg, angles):
         i = 0
         param = []
 
@@ -93,7 +93,9 @@ class command_interface:
             i += 1
 
         if (cmd == self.SEND_ANGLES):
-            print(param)
+            # copy param list to angles list
+            for i in range(0,6):
+                angles[i] = param[i]
 
     def exec_print(self, p_msg):
         i = 0

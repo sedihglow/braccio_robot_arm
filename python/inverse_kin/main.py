@@ -1,6 +1,5 @@
 from braccio import braccio_interface
 import argparse
-import concurrent.futures
 
 BAUD_RATE = 115200
 SERIAL_PORT = "/dev/ttyACM0"

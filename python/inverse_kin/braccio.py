@@ -17,14 +17,10 @@ class braccio_interface:
         # get setup messages to confirm Arduino is on
         self.read_exec()
 
-        print("finished first read")
-        
         # init angles from Arduino
         msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
         self.arduino_serial.write(msg)
-        print("request sent")
         self.read_exec()
-        print("end final read exec")
 
     def read_exec(self):
         finished = False
@@ -40,7 +36,7 @@ class braccio_interface:
                 elif (p_msg[0] == self.cmd.PRINT_MSG):
                     self.cmd.exec_print(p_msg)
                 elif(p_msg[0] == self.cmd.CMD_MSG):
-                    self.cmd.exec_command(p_msg)
+                    self.cmd.exec_command(p_msg, self.angles)
                 elif(p_msg[0] == self.cmd.FINISH):
                     print("Arduino finished sending message")
                     finished = True
@@ -79,6 +75,8 @@ class braccio_interface:
                                          a6)
         elif (change_angle == 8):
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
+            self.arduino_serial.write(msg)
+            return 0
         elif (change_angle == 9):
             msg = self.cmd.build_cmd_msg(self.cmd.SET_DFLT_POS)
         else:
@@ -97,7 +95,11 @@ class braccio_interface:
             elif (change_angle == 6):
                 msg = self.cmd.build_cmd_msg(self.cmd.M6_ANGLE, angle)
 
-        self.arduino_serial.write(msg) 
+        self.arduino_serial.write(msg)
+
+        # retreive changed angles from arduino to ensure it matches in the class
+        msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
+        self.arduino_serial.write(msg)
         return 0
 
     def interface_director(self):

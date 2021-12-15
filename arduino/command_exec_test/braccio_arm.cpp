@@ -308,6 +308,7 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
     break; 
     case SET_DFLT_POS:
         set_default_pos();
+        break;
     default:
         send_verbose("Invalid command recieved.\n");
         return errno = EINVAL;
