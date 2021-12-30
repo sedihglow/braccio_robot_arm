@@ -12,6 +12,10 @@ Servo wrist_ver;
 Servo wrist_rot;
 Servo gripper;
 
+/*
+ * Initializes braccio arm with Stream Object for serial communication and 
+ * sets all angles to their default safe state
+ */
 braccio_arm::braccio_arm(Stream &serial): serial(serial)
 {
     // set default angles into saftey position
@@ -35,6 +39,7 @@ void braccio_arm::init_arm(int soft_start_level)
     set_default_pos();
 }
 
+// sets all servos to default position
 void braccio_arm::set_default_pos()
 {
     send_verbose("setting default position\n");
@@ -51,7 +56,10 @@ void braccio_arm::set_default_pos()
 
     send_verbose("default position set\n");
 }
-
+/*
+ * Checks if there is something on the serial monitor. See serial.available()
+ * docs
+ */
 bool braccio_arm::serial_avail()
 {
     if (serial.available())
@@ -59,6 +67,7 @@ bool braccio_arm::serial_avail()
     return false;
 }
 
+// Reads len bytes from serial and returns number of bytes read
 int braccio_arm::serial_read(uint8_t *buff, size_t len)
 {
     int num_recv;
@@ -66,6 +75,7 @@ int braccio_arm::serial_read(uint8_t *buff, size_t len)
     return num_recv;
 }
 
+// fills and sends message to the host, sending all current angles.
 int braccio_arm::send_all_angles()
 {
     parsed_msg_s out_msg;
@@ -101,6 +111,7 @@ void braccio_arm::send_finish()
     serial.write(finish, 2);
 }
 
+// Sends a general print message to the host, use like printf()
 int braccio_arm::send_print(const char *format, ...)
 {
     va_list args;
@@ -131,6 +142,7 @@ int braccio_arm::send_print(const char *format, ...)
 }
 
 
+// Sends a error print message to the host, use like printf()
 int braccio_arm::send_error(const char *format, ...)
 {
     va_list args;
@@ -160,6 +172,10 @@ int braccio_arm::send_error(const char *format, ...)
     return SUCCESS;
 }
 
+/*
+ * Sends a verbose message to the host, only to be printed if the host has
+ * verbose flag active, use like printf()
+ */
 int braccio_arm::send_verbose(const char *format, ...)
 {
     va_list args;
@@ -190,6 +206,11 @@ int braccio_arm::send_verbose(const char *format, ...)
     return SUCCESS;
 }
 
+/* 
+ * Sets the parsed_io_msg struct with desired values, calculates msg_size
+ * if param_len value is PARAM_STRLEN, it will strnlen the length of the param
+ * list (for strings).
+ */
 int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type, 
                                  uint8_t cmd, uint8_t param_len, 
                                  uint8_t *param)
@@ -215,11 +236,11 @@ int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type,
         fill->param[i] = param[k];
         
     // exclude msg_size in size so reciever can parse 1 byte then parse the rest
-    fill->msg_size = param_len + MSG_SIZE_NO_PARAM - 1; 
-
+    fill->msg_size = param_len + MSG_SIZE_NO_PARAM - 1;
     return SUCCESS;
 }
 
+// Parses an array of bytes that holds a message from the host into in_msg
 int braccio_arm::parse_msg(uint8_t *msg, parsed_msg_s *in_msg)
 {
     uint8_t i = 0;
@@ -247,10 +268,17 @@ int braccio_arm::parse_msg(uint8_t *msg, parsed_msg_s *in_msg)
     return SUCCESS;
 }
 
+/*
+ * Takes a command message from the host after parsing.
+ * Executes the command requested from the host, if there is an error a
+ * message gets sent as an error and errno is set and returned.
+ */
 int braccio_arm::exec_command(parsed_msg_s *in_msg)
 {
-    if (in_msg->msg_type != CMD_MSG)
+    if (in_msg->msg_type != CMD_MSG) {
+        send_error("Invalid message type, not a command message");
         return errno = EINVAL;
+    }
 
     switch (in_msg->cmd) {
     case M1_ANGLE:
@@ -310,13 +338,16 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
         set_default_pos();
         break;
     default:
-        send_verbose("Invalid command recieved.\n");
+        send_error("Invalid command recieved.\n");
         return errno = EINVAL;
     }
 
     return SUCCESS;
 }
 
+/* Takes a filled parsed_io_msg struct and converts it to an io_msg struct
+ * building a serial message and sends it over serial to the host.
+ */
 int braccio_arm::create_send_msg(parsed_msg_s *msg)
 {
     io_msg_s to_send;
@@ -331,6 +362,10 @@ int braccio_arm::create_send_msg(parsed_msg_s *msg)
     return SUCCESS;
 }
 
+/*
+ * Creates and fills a io_msg struct from a filled parsed_io_msg struct.
+ * Sets and returns errno if param length is greater than its buffer length.
+ */
 int braccio_arm::create_io_msg(parsed_msg_s *msg, io_msg_s *io_msg)
 {
     uint8_t i = 0;
@@ -353,6 +388,7 @@ int braccio_arm::create_io_msg(parsed_msg_s *msg, io_msg_s *io_msg)
     return SUCCESS;
 }
 
+// takes an io_msg struct and sends its message contents to the host over serial
 int braccio_arm::send_message(io_msg_s *msg)
 {
     int ret;
@@ -368,6 +404,7 @@ int braccio_arm::send_message(io_msg_s *msg)
 
                     /* private functions */
 
+// checks if the angle is equal to or between a min and max value
 uint8_t braccio_arm::check_angle(uint8_t angle, uint8_t min, uint8_t max)
 {
     if (angle < min)
@@ -379,6 +416,9 @@ uint8_t braccio_arm::check_angle(uint8_t angle, uint8_t min, uint8_t max)
     return angle;
 }
 
+/* checks all 6 angles provided to ensure they are in range of the min and max
+ * of each corresponding servo.
+ */
 void braccio_arm::check_all_angles(uint8_t a1, uint8_t a2, uint8_t a3, 
                                    uint8_t a4, uint8_t a5, uint8_t a6)
 {
@@ -390,6 +430,13 @@ void braccio_arm::check_all_angles(uint8_t a1, uint8_t a2, uint8_t a3,
     angles.m6 = check_angle(a6, M6_MIN_ANGLE, M6_MAX_ANGLE);
 }
 
+/*
+ * identical input to vsnprintf() (see man 3 printf or vsnprintf() for more 
+ * info)
+ * Returns SUCCESS or FAILURE, unlike vsnprintf() which returns the number
+ * written into the buffer. FAILURE means that the format string was too long
+ * for the buffer. See error message.
+ */
 int braccio_arm::vsnprintf_check(char *buff, int size, const char *format,
                                  va_list args)
 {

@@ -1,6 +1,11 @@
 /*
- * Program to test sending and recieving data from serial going through
- * a command interface with braccio robot arm
+ * Program to control the Braccio robot arm with commands from the host
+ * computer over a serial interface.
+ *
+ * Originally written on an Arduino UNO but space ran out with full buffer
+ * sizes. It may still fit on an UNO with smaller buffer sizes but is now
+ * being controlled with an Arduino DUE.
+ *
  * written by: James Ross
  */
 

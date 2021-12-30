@@ -55,13 +55,11 @@
 // Safety angles
 // NOTE: This may differ from the getting started guide. the getting started
 //       guide does not match the Braccio.begin() code. These angles are the
-//       default position as given in the Braccio.h library with some
-//       modification. Note the init does not set everything the same as this 
-//       for some reason. Notes in the braccio library.
+//       angles i set for its default position after the Braccio.begin() code.
 #define M1_SAFE_ANGLE 0
-#define M2_SAFE_ANGLE 40
-#define M3_SAFE_ANGLE 180
-#define M4_SAFE_ANGLE 170
+#define M2_SAFE_ANGLE 140
+#define M3_SAFE_ANGLE 0
+#define M4_SAFE_ANGLE 10 
 #define M5_SAFE_ANGLE 90
 #define M6_SAFE_ANGLE 73
 
@@ -80,12 +78,12 @@ typedef struct io_msg {
 
 #define NUM_ANGLES 6 // m[1-6]
 typedef struct braccio_angles {
-    uint8_t m1;
-    uint8_t m2;
-    uint8_t m3;
-    uint8_t m4;
-    uint8_t m5;
-    uint8_t m6;
+    uint8_t m1; // base
+    uint8_t m2; // shoulder
+    uint8_t m3; // elbow
+    uint8_t m4; // wrist vertial
+    uint8_t m5; // wrist rotation
+    uint8_t m6; // gripper
 } braccio_angles_s;
 
 class braccio_arm {
