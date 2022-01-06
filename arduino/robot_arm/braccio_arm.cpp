@@ -3,8 +3,10 @@
 #define SUCCESS 0
 #define FAILURE -1
 
-// these must be declared for extern variables in the Braccio library
-// in Braccio.cpp 
+/*
+ * these must be declared for extern variables in the Braccio library
+ * in Braccio.cpp
+ */
 Servo base;
 Servo shoulder;
 Servo elbow;

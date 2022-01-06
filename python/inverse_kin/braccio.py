@@ -1,6 +1,6 @@
 from command import command_interface
 from arduino_serial import arduino_com
-import numpy as np
+from kin import kinematics
 
 class braccio_interface:
     def __init__(self, verbose, port, baudrate, rtimeout):
@@ -8,21 +8,12 @@ class braccio_interface:
         self.arduino_serial = arduino_com(port, baudrate, rtimeout)
         self.cmd = command_interface(verbose)
 
-        self.angles = []
-        for i in range(0,6,1):
-            self.angles.append(0)
-        
-        self.link_len = []
-        for i in range(0,5,1):
-            self.link_len.append(0)
-        
-        # length in cm
-        self.link_len[0] = 6
-        self.link_len[1] = 13
-        self.link_len[2] = 12
-        self.link_len[3] = 6.5
-        self.link_len[4] = 12
-
+        self.kin = kinematics()
+    
+    def verbose_print(self, msg):
+        if (self.verbose):
+            print(msg)
+         
     def begin_com(self):
         self.arduino_serial.begin()
 
@@ -44,13 +35,13 @@ class braccio_interface:
                 read = self.arduino_serial.read(msg_size)
                 p_msg = self.cmd.parse_in_msg(read)
                 if (p_msg[0] == self.cmd.ACK):
-                    print("ACK recieved")
+                    self.verbose_print("ACK recieved")
                 elif (p_msg[0] == self.cmd.PRINT_MSG):
                     self.cmd.exec_print(p_msg)
                 elif(p_msg[0] == self.cmd.CMD_MSG):
-                    self.cmd.exec_command(p_msg, self.angles)
+                    self.cmd.exec_command(p_msg, self.kin.angles)
                 elif(p_msg[0] == self.cmd.FINISH):
-                    print("Arduino finished sending message")
+                    self.verbose_print("Arduino finished sending message")
                     finished = True
 
     def print_cmd_menu(self):
@@ -124,7 +115,7 @@ class braccio_interface:
         # print menu for cmd or inverse kin
         print("Which functionality would you like to run?") 
         print("1. Command Interface (Tinker with servos and commands)\n"
-              "2. Invere Kinematics\n"
+              "2. Inverse Kinematics\n"
               "4. exit")
         read = input("Enter Number: ")
         read = int(read)
@@ -152,76 +143,38 @@ class braccio_interface:
     def inverse_kin_menu(self):
         print("Inverse Kinematics functionalities")
         print("1. Rotation Matrix function\n"
-              "2. exit")
+              "2. Displacement Vectors\n"
+              "3. Homogeneous Transform Matrix.\n"
+              "4. exit")
+    
+    # fills kin.angles with user input
+    def get_user_angles(self):
+        print("Enter 6 angles for braccio, servo 0-5 (M1-M6)")
+        a1, a2, a3, a4, a5, a6 = input("Enter angles: ").split()
+        a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
+                                  int(a5), int(a6)]
+        self.kin.angles[0] = a1
+        self.kin.angles[1] = a2
+        self.kin.angles[2] = a3
+        self.kin.angles[3] = a4
+        self.kin.angles[4] = a5
+        self.kin.angles[5] = a6
 
-    # returns a numpy array matrix, on error returns zero matrix
-    def create_rot_matrix(self, end_frame):
-        # Convert servo angles from degrees to radians
-        a0_rad = np.deg2rad(self.angles[0])
-        a1_rad = np.deg2rad(self.angles[1])
-        a2_rad = np.deg2rad(self.angles[2])
-        a3_rad = np.deg2rad(self.angles[3])
-        a4_rad = np.deg2rad(self.angles[4])
-        a5_rad = np.deg2rad(self.angles[5])
-        
-        if (end_frame == 0):
-            print("ERROR: Invalid start and end frame rot mat, same value")
-            error = np.array([[0,0,0],
-                              [0,0,0],
-                              [0,0,0]])
-            return error
+    def input_current_or_new_angles(self):
+            print("Use current Braccio angles or use user input angles?")
+            print("1. Current angles.\n"
+                  "2. User input angles.")
+            read = input("Enter number: ")
+            read = int(read)
 
-        # This matrix helps convert the servo_1 frame to the servo_0 frame.
-        rot_mat_0_1 = np.array([[np.cos(a0_rad), 0, np.sin(a0_rad)],
-                                [np.sin(a0_rad), 0, -np.cos(a0_rad)],
-                                [0, 1, 0]])
-        
-        if (end_frame == 1):
-            return rot_mat_0_1
-
-        # This matrix helps convert the servo_2 frame to the servo_1 frame.
-        rot_mat_1_2 = np.array([[np.cos(a1_rad), -np.sin(a1_rad), 0],
-                                [np.sin(a1_rad), np.cos(a1_rad), 0],
-                                [0, 0, 1]]) 
-        if (end_frame == 2):
-            rot_mat_0_2 = rot_mat_0_1 @ rot_mat_1_2
-            return rot_mat_0_2
-
-        # This matrix helps convert the servo_3 frame to the servo_2 frame.
-        rot_mat_2_3 = np.array([[np.cos(a2_rad), -np.sin(a2_rad), 0],
-                                [np.sin(a2_rad), np.cos(a2_rad), 0],
-                                [0, 0, 1]]) 
+            if (read == 2):
+                self.get_user_angles()
  
-        if (end_frame == 3):
-            rot_mat_0_3 = rot_mat_0_1 @ rot_mat_1_2 @ rot_mat_2_3
-            return rot_mat_0_3
-
-        # This matrix helps convert the servo_4 frame to the servo_3 frame.
-        rot_mat_3_4 = np.array([[-np.sin(a3_rad), 0, np.cos(a3_rad)],
-                                [np.cos(a3_rad), 0, np.sin(a3_rad)],
-                                [0, 1, 0]]) 
-        
-        if (end_frame == 4):
-            rot_mat_0_4 = (rot_mat_0_1 @ rot_mat_1_2 @ rot_mat_2_3 @
-                           rot_mat_3_4)
-            return rot_mat_0_4
-
-        # This matrix helps convert the servo_5 frame to the servo_4 frame.
-        rot_mat_4_5 = np.array([[np.cos(a4_rad), -np.sin(a4_rad), 0],
-                                [np.sin(a4_rad), np.cos(a4_rad), 0],
-                                [0, 0, 1]])
-         
-        # Calculate the rotation matrix that converts the 
-        # end-effector frame (frame 5) to the servo_0 frame.
-        rot_mat_0_5 = (rot_mat_0_1 @ rot_mat_1_2 @ rot_mat_2_3 @ rot_mat_3_4 @ 
-                       rot_mat_4_5)
-        return rot_mat_0_5
-
     def inverse_kin_interface(self):
-        exit_val = 2
+        exit_val = 4
         self.inverse_kin_menu()
 
-        read = input("Enter number:")
+        read = input("Enter number: ")
         read = int(read)
 
         if (read == exit_val):
@@ -230,21 +183,12 @@ class braccio_interface:
         if (read == 1): # rotation matrix functionality testing
             print("Testing rotation matrix function.")
 
-            print("Enter 6 angles for braccio, servo 0-5 (M1-M6)")
-            a1, a2, a3, a4, a5, a6 = input("Enter angles: ").split()
-            a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
-                                      int(a5), int(a6)]
-            self.angles[0] = a1
-            self.angles[1] = a2
-            self.angles[2] = a3
-            self.angles[3] = a4
-            self.angles[4] = a5
-            self.angles[5] = a6
+            self.get_user_angles()
 
             print("Enter ending frame for rot matrix")
-            end_frame = input("Enter frame number (0-5):")
+            end_frame = input("Enter frame number (0-5): ")
 
-            rot_matrix = self.create_rot_matrix(end_frame)
+            rot_matrix = self.kin.create_rot_matrix(end_frame)
             print(rot_matrix)
             
             # reset angles to match braccio
@@ -252,4 +196,26 @@ class braccio_interface:
             self.arduino_serial.write(msg)
             self.read_exec()
             return 0
+        elif (read == 2): # test the displacement vector function
+            print("Testing displacement vectors")
+            
+            self.input_current_or_new_angles()
+            
+            # set new displacement vectors and print
+            self.kin.create_fill_disp_vects()
+            self.kin.print_disp_vects()
+
+            # reset angles and displacement vectors
+            msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
+            self.arduino_serial.write(msg)
+            self.read_exec()
+
+            self.kin.create_fill_disp_vects()
+            return 0
+        elif (read == 3):
+            print("Testing the Homogeneous Transform Matrix functionality.")
+
+            self.input_current_or_new_angles()
+            return 0
         return 0
+
