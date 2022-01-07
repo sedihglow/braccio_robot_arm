@@ -7,6 +7,11 @@ class kinematics:
     A3_LEN = 6.5 # wrist vertial to wrist rotation
     A4_LEN = 12  # wrist rotation to end effector
 
+    LINKS = 5
+    DISP_VECTS = 5
+    ROT_MATS = 6
+    HOMO_MATS = 6
+
     def __init__(self):
 
         self.angles = []
@@ -15,7 +20,7 @@ class kinematics:
 
         # Length of links between joints (servos) on arm
         self.link_len = []
-        for i in range(0,5,1):
+        for i in range(0,self.LINKS,1):
             self.link_len.append(0)
         
         # length in cm
@@ -27,12 +32,57 @@ class kinematics:
 
         # displacement vectors
         self.disp_vec = []
-        for i in range(0,5,1):
+        for i in range(0,self.DISP_VECTS,1):
             self.disp_vec.append(np.array([[0],
                                            [0],
                                            [0]]))
         # initialize displacement vectors
         self.create_fill_disp_vects()
+
+        # rotation matricies 0-1, 1-2, 2-3, etc. up to 5 frames
+        self.rot_mat = []
+        for i in range(0,self.ROT_MATS,1):
+            self.rot_mat.append(np.array([[0],
+                                          [0],
+                                          [0]]))
+        # fills the rotation matricies and provides rot_mat_0_[1-5]
+        self.create_rot_matrix()
+
+        self.homo_trans_mat = []
+        for i in range(0,self.HOMO_MATS,1):
+            self.homo_trans_mat.append(np.array([[0,0,0,0],
+                                                 [0,0,0,0],
+                                                 [0,0,0,0],
+                                                 [0,0,0,0]]))
+        self.create_homo_trans()
+        
+    
+    # creates and fills the homogenous transform matricies, last index is 0_5
+    # returns H_0_5 matrix which is index 5 of the homo_trans_mat list
+    # NOTE: @ syntax multiplies the matricies
+    def create_homo_trans(self):
+        # ensure rotation matricies and displacement vectors are up to date
+        self.create_rot_matrix()
+        self.create_fill_disp_vects()
+        
+        for i in range(0,self.HOMO_MATS-1,1):
+            axis = 1 # concat matrix vertically
+            # combine rot_mat with disp_vect (disp column to the right)
+            self.homo_trans_mat[i] = np.concatenate((self.rot_mat[i], 
+                                                    self.disp_vec[i]), axis)
+            axis = 0 # concat matrix horizontally
+            # combine current matrix a new row so we can multiply later
+            self.homo_trans_mat[i] = np.concatenate((self.homo_trans_mat[i],
+                                                    [[0,0,0,1]]), axis)
+        
+        # This index holds H_0_5 which contains R_0_5 and D_0_5
+        self.homo_trans_mat[5] = (self.homo_trans_mat[0] @ 
+                                  self.homo_trans_mat[1] @
+                                  self.homo_trans_mat[2] @
+                                  self.homo_trans_mat[3] @
+                                  self.homo_trans_mat[4])
+        return self.homo_trans_mat[5]
+
 
     def print_disp_vects(self):
         print("Displacement Vectors")
@@ -84,7 +134,8 @@ class kinematics:
 
     # returns a numpy array matrix, on error returns zero matrix, finds the 
     # rotation matrix for the angles on the braccio
-    def create_rot_matrix(self, end_frame):
+    # NOTE: @ syntax multiplies the matricies
+    def create_rot_matrix(self, end_frame=5):
         # Convert servo angles from degrees to radians
         a0_rad = np.deg2rad(self.angles[0])
         a1_rad = np.deg2rad(self.angles[1])
@@ -93,57 +144,57 @@ class kinematics:
         a4_rad = np.deg2rad(self.angles[4])
         a5_rad = np.deg2rad(self.angles[5])
         
-        if (end_frame == 0):
-            print("ERROR: Invalid start and end frame rot mat, same value")
+        if (end_frame == 0 or end_frame > 5):
+            print("ERROR: Invalid end frame for rot matrix")
             error = np.array([[0,0,0],
                               [0,0,0],
                               [0,0,0]])
             return error
 
         # This matrix helps convert the servo_1 frame to the servo_0 frame.
-        rot_mat_0_1 = np.array([[np.cos(a0_rad), 0, np.sin(a0_rad)],
-                                [np.sin(a0_rad), 0, -np.cos(a0_rad)],
-                                [0, 1, 0]])
+        self.rot_mat[0] = np.array([[np.cos(a0_rad), 0, np.sin(a0_rad)],
+                                    [np.sin(a0_rad), 0, -np.cos(a0_rad)],
+                                    [0, 1, 0]])
         
         if (end_frame == 1):
-            return rot_mat_0_1
+            return self.rot_mat[0] 
 
         # This matrix helps convert the servo_2 frame to the servo_1 frame.
-        rot_mat_1_2 = np.array([[np.cos(a1_rad), -np.sin(a1_rad), 0],
-                                [np.sin(a1_rad), np.cos(a1_rad), 0],
-                                [0, 0, 1]]) 
+        self.rot_mat[1] = np.array([[np.cos(a1_rad), -np.sin(a1_rad), 0],
+                                    [np.sin(a1_rad), np.cos(a1_rad), 0],
+                                    [0, 0, 1]]) 
         if (end_frame == 2):
-            rot_mat_0_2 = rot_mat_0_1 @ rot_mat_1_2
+            rot_mat_0_2 = self.rot_mat[0] @ self.rot_mat[1] 
             return rot_mat_0_2
 
         # This matrix helps convert the servo_3 frame to the servo_2 frame.
-        rot_mat_2_3 = np.array([[np.cos(a2_rad), -np.sin(a2_rad), 0],
-                                [np.sin(a2_rad), np.cos(a2_rad), 0],
-                                [0, 0, 1]]) 
+        self.rot_mat[2] = np.array([[np.cos(a2_rad), -np.sin(a2_rad), 0],
+                                    [np.sin(a2_rad), np.cos(a2_rad), 0],
+                                    [0, 0, 1]]) 
  
         if (end_frame == 3):
-            rot_mat_0_3 = rot_mat_0_1 @ rot_mat_1_2 @ rot_mat_2_3
+            rot_mat_0_3 = self.rot_mat[0] @ self.rot_mat[1] @ self.rot_mat[2]
             return rot_mat_0_3
 
         # This matrix helps convert the servo_4 frame to the servo_3 frame.
-        rot_mat_3_4 = np.array([[-np.sin(a3_rad), 0, np.cos(a3_rad)],
-                                [np.cos(a3_rad), 0, np.sin(a3_rad)],
-                                [0, 1, 0]]) 
+        self.rot_mat[3] = np.array([[-np.sin(a3_rad), 0, np.cos(a3_rad)],
+                                    [np.cos(a3_rad), 0, np.sin(a3_rad)],
+                                    [0, 1, 0]]) 
         
         if (end_frame == 4):
-            rot_mat_0_4 = (rot_mat_0_1 @ rot_mat_1_2 @ rot_mat_2_3 @
-                           rot_mat_3_4)
+            rot_mat_0_4 = (self.rot_mat[0] @ self.rot_mat[1] @ self.rot_mat[2] 
+                           @ self.rot_mat[3])
             return rot_mat_0_4
 
         # This matrix helps convert the servo_5 frame to the servo_4 frame.
-        rot_mat_4_5 = np.array([[np.cos(a4_rad), -np.sin(a4_rad), 0],
-                                [np.sin(a4_rad), np.cos(a4_rad), 0],
-                                [0, 0, 1]])
+        self.rot_mat[4] = np.array([[np.cos(a4_rad), -np.sin(a4_rad), 0],
+                                    [np.sin(a4_rad), np.cos(a4_rad), 0],
+                                    [0, 0, 1]])
          
         # Calculate the rotation matrix that converts the 
-        # end-effector frame (frame 5) to the servo_0 frame.
-        rot_mat_0_5 = (rot_mat_0_1 @ rot_mat_1_2 @ rot_mat_2_3 @ rot_mat_3_4 @ 
-                       rot_mat_4_5)
-        return rot_mat_0_5
+        # end-effector frame (frame 5) to the servo_0 frame. rot_mat_0_5
+        self.rot_mat[5] = (self.rot_mat[0] @ self.rot_mat[1] @ self.rot_mat[2] @ 
+                           self.rot_mat[3] @ self.rot_mat[4])
+        return self.rot_mat[5] 
 
  

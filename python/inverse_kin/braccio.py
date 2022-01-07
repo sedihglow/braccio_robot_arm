@@ -216,6 +216,8 @@ class braccio_interface:
             print("Testing the Homogeneous Transform Matrix functionality.")
 
             self.input_current_or_new_angles()
+
+
             return 0
         return 0
 
