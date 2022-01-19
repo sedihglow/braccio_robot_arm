@@ -40,6 +40,7 @@ class braccio_interface:
                     self.cmd.exec_print(p_msg)
                 elif(p_msg[0] == self.cmd.CMD_MSG):
                     self.cmd.exec_command(p_msg, self.kin.angles)
+                    self.set_kin_vars()
                 elif(p_msg[0] == self.cmd.FINISH):
                     self.verbose_print("Arduino finished sending message")
                     finished = True
@@ -115,7 +116,7 @@ class braccio_interface:
         # print menu for cmd or inverse kin
         print("Which functionality would you like to run?") 
         print("1. Command Interface (Tinker with servos and commands)\n"
-              "2. Inverse Kinematics\n"
+              "2. Kinematics\n"
               "4. exit")
         read = input("Enter Number: ")
         read = int(read)
@@ -134,14 +135,14 @@ class braccio_interface:
         elif (read == 2): # inverse kin
             exit = False
             while (not exit):
-                exit = self.inverse_kin_interface()
+                exit = self.kin_interface()
         else:
             print("invalid input")
             
         return 0
 
-    def inverse_kin_menu(self):
-        print("Inverse Kinematics functionalities")
+    def kin_menu(self):
+        print("Kinematics functionalities")
         print("1. Rotation Matrix function\n"
               "2. Displacement Vectors\n"
               "3. Homogeneous Transform Matrix.\n"
@@ -169,10 +170,30 @@ class braccio_interface:
 
             if (read == 2):
                 self.get_user_angles()
- 
-    def inverse_kin_interface(self):
+
+    # set kinematic variables with angles that are set
+    def set_kin_vars(self): 
+        self.kin.create_rot_matrix()
+        self.kin.create_fill_disp_vects()
+        self.kin.create_homo_trans()
+    
+    def print_homo_trans_mats(self):
+        print("--Homogeneous transform 0_1--")
+        print(self.kin.homo_trans_mat[0])
+        print("--Homogeneous transform 1_2--")
+        print(self.kin.homo_trans_mat[1])
+        print("--Homogeneous transform 2_3--")
+        print(self.kin.homo_trans_mat[2])
+        print("--Homogeneous transform 3_4--")
+        print(self.kin.homo_trans_mat[3])
+        print("--Homogeneous transform 4_5--")
+        print(self.kin.homo_trans_mat[4])
+        print("--Homogeneous transform 0_5--")
+        print(self.kin.homo_trans_mat[5])
+
+    def kin_interface(self):
         exit_val = 4
-        self.inverse_kin_menu()
+        self.kin_menu()
 
         read = input("Enter number: ")
         read = int(read)
@@ -182,13 +203,19 @@ class braccio_interface:
         
         if (read == 1): # rotation matrix functionality testing
             print("Testing rotation matrix function.")
+            
+            self.input_current_or_new_angles()
 
-            self.get_user_angles()
+            print("Enter starting frame for rot matrix")
+            start_frame = input("Enter frame number (0-4)")
+            start_frame = int(start_frame)
 
             print("Enter ending frame for rot matrix")
             end_frame = input("Enter frame number (0-5): ")
+            end_frame = int(end_frame)
 
-            rot_matrix = self.kin.create_rot_matrix(end_frame)
+            rot_matrix = self.kin.create_rot_matrix(start_frame,end_frame)
+            print("--rotation matrix {:d}_{:d}--".format(start_frame, end_frame))
             print(rot_matrix)
             
             # reset angles to match braccio
@@ -209,15 +236,14 @@ class braccio_interface:
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
             self.read_exec()
-
-            self.kin.create_fill_disp_vects()
+            self.set_kin_vars()
             return 0
         elif (read == 3):
             print("Testing the Homogeneous Transform Matrix functionality.")
-
             self.input_current_or_new_angles()
-
-
+            self.set_kin_vars() # in case angles changed
+            self.print_homo_trans_mats()
             return 0
+
         return 0
 

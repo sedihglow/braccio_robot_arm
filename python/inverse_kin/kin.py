@@ -61,10 +61,6 @@ class kinematics:
     # returns H_0_5 matrix which is index 5 of the homo_trans_mat list
     # NOTE: @ syntax multiplies the matricies
     def create_homo_trans(self):
-        # ensure rotation matricies and displacement vectors are up to date
-        self.create_rot_matrix()
-        self.create_fill_disp_vects()
-        
         for i in range(0,self.HOMO_MATS-1,1):
             axis = 1 # concat matrix vertically
             # combine rot_mat with disp_vect (disp column to the right)
@@ -135,7 +131,7 @@ class kinematics:
     # returns a numpy array matrix, on error returns zero matrix, finds the 
     # rotation matrix for the angles on the braccio
     # NOTE: @ syntax multiplies the matricies
-    def create_rot_matrix(self, end_frame=5):
+    def create_rot_matrix(self, start_frame=0, end_frame=5):
         # Convert servo angles from degrees to radians
         a0_rad = np.deg2rad(self.angles[0])
         a1_rad = np.deg2rad(self.angles[1])
@@ -144,8 +140,10 @@ class kinematics:
         a4_rad = np.deg2rad(self.angles[4])
         a5_rad = np.deg2rad(self.angles[5])
         
-        if (end_frame == 0 or end_frame > 5):
-            print("ERROR: Invalid end frame for rot matrix")
+        if (end_frame < 1 or end_frame > 5 or 
+            start_frame < 0 or start_frame > 4 or
+            start_frame >= end_frame):
+            print("ERROR: Invalid start/end frame for rot matrix")
             error = np.array([[0,0,0],
                               [0,0,0],
                               [0,0,0]])
@@ -156,36 +154,21 @@ class kinematics:
                                     [np.sin(a0_rad), 0, -np.cos(a0_rad)],
                                     [0, 1, 0]])
         
-        if (end_frame == 1):
-            return self.rot_mat[0] 
-
         # This matrix helps convert the servo_2 frame to the servo_1 frame.
         self.rot_mat[1] = np.array([[np.cos(a1_rad), -np.sin(a1_rad), 0],
                                     [np.sin(a1_rad), np.cos(a1_rad), 0],
                                     [0, 0, 1]]) 
-        if (end_frame == 2):
-            rot_mat_0_2 = self.rot_mat[0] @ self.rot_mat[1] 
-            return rot_mat_0_2
 
         # This matrix helps convert the servo_3 frame to the servo_2 frame.
         self.rot_mat[2] = np.array([[np.cos(a2_rad), -np.sin(a2_rad), 0],
                                     [np.sin(a2_rad), np.cos(a2_rad), 0],
                                     [0, 0, 1]]) 
  
-        if (end_frame == 3):
-            rot_mat_0_3 = self.rot_mat[0] @ self.rot_mat[1] @ self.rot_mat[2]
-            return rot_mat_0_3
-
         # This matrix helps convert the servo_4 frame to the servo_3 frame.
         self.rot_mat[3] = np.array([[-np.sin(a3_rad), 0, np.cos(a3_rad)],
                                     [np.cos(a3_rad), 0, np.sin(a3_rad)],
                                     [0, 1, 0]]) 
         
-        if (end_frame == 4):
-            rot_mat_0_4 = (self.rot_mat[0] @ self.rot_mat[1] @ self.rot_mat[2] 
-                           @ self.rot_mat[3])
-            return rot_mat_0_4
-
         # This matrix helps convert the servo_5 frame to the servo_4 frame.
         self.rot_mat[4] = np.array([[np.cos(a4_rad), -np.sin(a4_rad), 0],
                                     [np.sin(a4_rad), np.cos(a4_rad), 0],
@@ -195,6 +178,54 @@ class kinematics:
         # end-effector frame (frame 5) to the servo_0 frame. rot_mat_0_5
         self.rot_mat[5] = (self.rot_mat[0] @ self.rot_mat[1] @ self.rot_mat[2] @ 
                            self.rot_mat[3] @ self.rot_mat[4])
-        return self.rot_mat[5] 
+        
+        if (start_frame == 0):
+            if (end_frame == 1):
+                return self.rot_mat[0] # rot_mat_0_1
+            elif (end_frame == 2):
+                rot_mat_0_2 = self.rot_mat[0] @ self.rot_mat[1] 
+                return rot_mat_0_2
+            elif (end_frame == 3):
+                rot_mat_0_3 = (self.rot_mat[0] @ self.rot_mat[1] @ 
+                               self.rot_mat[2])
+                return rot_mat_0_3
+            elif (end_frame == 4):
+                rot_mat_0_4 = (self.rot_mat[0] @ self.rot_mat[1] @ 
+                               self.rot_mat[2] @ self.rot_mat[3])
+                return rot_mat_0_4
+            else:
+                return self.rot_mat[5]
+        elif (start_frame == 1):
+            if (end_frame == 2):
+                return self.rot_mat[1]
+            elif (end_frame == 3):
+                rot_mat_1_3 = self.rot_mat[1] @ self.rot_mat[2]
+                return rot_mat_1_3
+            elif (end_frame == 4):
+                rot_mat_1_4 = (self.rot_mat[1] @ self.rot_mat[2] @
+                               self.rot_mat[3])
+                return rot_mat_1_4
+            else:
+               rot_mat_1_5 = (self.rot_mat[1] @ self.rot_mat[2] @
+                              self.rot_mat[3] @ self.rot_mat[4])
+               return rot_mat_1_5
+        elif (start_frame == 2):
+            if (end_frame == 3):
+                return self.rot_mat[2] # rot_mat_2_3
+            elif (end_frame == 4):
+                rot_mat_2_4 = self.rot_mat[2] @ self.rot_mat[3]
+                return rot_mat_2_4
+            else:
+                rot_mat_2_5 = (self.rot_mat[2] @ self.rot_mat[3] @
+                               self.rot_mat[4])
+        elif (start_frame == 3):
+            if (end_frame == 4):
+                return self.rot_mat[3] # rot_mat_3_4
+            else:
+                rot_mat_3_5 = self.rot_mat[3] @ self.rot_mat[4]
+        elif (start_grame == 4):
+            return self.rot_mat[4] # rot_mat_4_5
 
- 
+        return self.rot_mat[5] # default return rot_mat_0_5
+
+
