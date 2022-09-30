@@ -7,10 +7,10 @@ class kinematics:
     A3_LEN = 6.5 # wrist vertial to wrist rotation
     A4_LEN = 12  # wrist rotation to end effector
 
-    LINKS = 5
-    DISP_VECTS = 5
-    ROT_MATS = 6
-    HOMO_MATS = 6
+    LINKS = 5      # Links on arm
+    DISP_VECTS = 5 # Displacement vectors
+    ROT_MATS = 6   # Rotation Matricies
+    HOMO_MATS = 6  # Homogeneous Matricies
 
     def __init__(self):
 

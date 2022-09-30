@@ -3,6 +3,9 @@ from arduino_serial import arduino_com
 from kin import kinematics
 
 class braccio_interface:
+    EXIT_RET = 1 # Exit value to exit from menu or program
+    STAY_RET = 0 # return value for interfaces staying in program
+
     def __init__(self, verbose, port, baudrate, rtimeout):
         self.verbose = verbose
         self.arduino_serial = arduino_com(port, baudrate, rtimeout)
@@ -13,7 +16,8 @@ class braccio_interface:
     def verbose_print(self, msg):
         if (self.verbose):
             print(msg)
-         
+    
+    # Starts communication with the braccio controller and gets init angles
     def begin_com(self):
         self.arduino_serial.begin()
 
@@ -25,6 +29,9 @@ class braccio_interface:
         self.arduino_serial.write(msg)
         self.read_exec()
 
+    # Read a message from the braccio controller.
+    # NOTE: Loops waiting for the finish sending command from the controller. 
+    #       Only call when something should be returning from the controller.
     def read_exec(self):
         finished = False
         while (not finished):
@@ -45,69 +52,10 @@ class braccio_interface:
                     self.verbose_print("Arduino finished sending message")
                     finished = True
 
-    def print_cmd_menu(self):
-        print("Choose angle to set or command to send\n"
-              "1. m1, base\n"
-              "2. m2, shoulder\n"
-              "3. m3, elbow\n"
-              "4. m4, wrist vertical\n"
-              "5. m5, write rotation\n"
-              "6. m6, gripper\n"
-              "7. All angles\n"
-              "8. Request all angles\n"
-              "9. Set default position\n"
-              "10. exit")
-
-    def cmd_menu_input_send(self):
-        self.print_cmd_menu()
-        change_angle = input("Enter number: ")
-        change_angle = int(change_angle)
-
-        if (change_angle > 10 or change_angle < 1):
-            print("Invalid Input")
-            return 0
-
-        if (change_angle == 10):
-                print("exit program")
-                return 1
-        
-        if (change_angle == 7):
-            a1, a2, a3, a4, a5, a6 = input("Enter angles: ").split()
-            a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
-                                      int(a5), int(a6)]
-            msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, a1, a2, a3, a4, a5, 
-                                         a6)
-        elif (change_angle == 8):
-            msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
-            self.arduino_serial.write(msg)
-            return 0
-        elif (change_angle == 9):
-            msg = self.cmd.build_cmd_msg(self.cmd.SET_DFLT_POS)
-        else:
-            angle = input("Enter angle: ")
-            angle = int(angle)
-            if (change_angle == 1):
-                msg = self.cmd.build_cmd_msg(self.cmd.M1_ANGLE, angle)
-            elif (change_angle == 2):
-                msg = self.cmd.build_cmd_msg(self.cmd.M2_ANGLE, angle)
-            elif (change_angle == 3):
-                msg = self.cmd.build_cmd_msg(self.cmd.M3_ANGLE, angle)
-            elif (change_angle == 4):
-                msg = self.cmd.build_cmd_msg(self.cmd.M4_ANGLE, angle)
-            elif (change_angle == 5):
-                msg = self.cmd.build_cmd_msg(self.cmd.M5_ANGLE, angle)
-            elif (change_angle == 6):
-                msg = self.cmd.build_cmd_msg(self.cmd.M6_ANGLE, angle)
-
-        self.arduino_serial.write(msg)
-
-        # retreive changed angles from arduino to ensure it matches in the class
-        msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
-        self.arduino_serial.write(msg)
-        return 0
-
     def interface_director(self):
         exit_val = 4
+        cmd_inter_val = 1
+        kin_inter_val = 2
         print("This program will allow you to tinker with all the servos via\n"
               "the command interface with the Arduino controller.\n"
               "It will also showcase an implementation of inverse kinimatics\n"
@@ -122,9 +70,9 @@ class braccio_interface:
         read = int(read)
 
         if (read == exit_val):
-            return 1
+            return EXIT_RET;
 
-        if (read == 1): # cmd interface
+        if (read == cmd_inter_val): # cmd interface
             exit = False
             while (not exit):
                 exit = self.cmd_menu_input_send()
@@ -132,14 +80,14 @@ class braccio_interface:
                 print("reading messages from Arduino")
                 if (not exit):
                     self.read_exec()
-        elif (read == 2): # inverse kin
+        elif (read == kin_inter_val): # inverse kin
             exit = False
             while (not exit):
                 exit = self.kin_interface()
         else:
             print("invalid input")
             
-        return 0
+        return STAY_RET;
 
     def kin_menu(self):
         print("Kinematics functionalities")
@@ -191,6 +139,71 @@ class braccio_interface:
         print("--Homogeneous transform 0_5--")
         print(self.kin.homo_trans_mat[5])
 
+    def print_cmd_menu(self):
+        print("Choose angle to set or command to send\n"
+              "1. m1, base\n"
+              "2. m2, shoulder\n"
+              "3. m3, elbow\n"
+              "4. m4, wrist vertical\n"
+              "5. m5, write rotation\n"
+              "6. m6, gripper\n"
+              "7. All angles\n"
+              "8. Request all angles\n"
+              "9. Set default position\n"
+              "10. exit")
+
+    # Interface for controller commands to change angles on the braccio. Gets
+    # user input, builds the corresponding message and writes to the controller.
+    # Once written, request the angles from the controller to make sure angles
+    # being recorded on host and controller are consistant.
+    def cmd_menu_input_send(self):
+        self.print_cmd_menu()
+        change_angle = input("Enter number: ")
+        change_angle = int(change_angle)
+
+        if (change_angle > 10 or change_angle < 1):
+            print("Invalid Input")
+            return 0
+
+        if (change_angle == 10):
+                print("exit program")
+                return EXIT_RET
+        
+        if (change_angle == 7):
+            a1, a2, a3, a4, a5, a6 = input("Enter angles: ").split()
+            a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
+                                      int(a5), int(a6)]
+            msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, a1, a2, a3, a4, a5, 
+                                         a6)
+        elif (change_angle == 8):
+            msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
+            self.arduino_serial.write(msg)
+            return STAY_RET
+        elif (change_angle == 9):
+            msg = self.cmd.build_cmd_msg(self.cmd.SET_DFLT_POS)
+        else:
+            angle = input("Enter angle: ")
+            angle = int(angle)
+            if (change_angle == 1):
+                msg = self.cmd.build_cmd_msg(self.cmd.M1_ANGLE, angle)
+            elif (change_angle == 2):
+                msg = self.cmd.build_cmd_msg(self.cmd.M2_ANGLE, angle)
+            elif (change_angle == 3):
+                msg = self.cmd.build_cmd_msg(self.cmd.M3_ANGLE, angle)
+            elif (change_angle == 4):
+                msg = self.cmd.build_cmd_msg(self.cmd.M4_ANGLE, angle)
+            elif (change_angle == 5):
+                msg = self.cmd.build_cmd_msg(self.cmd.M5_ANGLE, angle)
+            elif (change_angle == 6):
+                msg = self.cmd.build_cmd_msg(self.cmd.M6_ANGLE, angle)
+
+        self.arduino_serial.write(msg)
+
+        # retreive changed angles from arduino to ensure it matches in the class
+        msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
+        self.arduino_serial.write(msg)
+        return STAY_RET
+
     def kin_interface(self):
         exit_val = 4
         self.kin_menu()
@@ -199,7 +212,7 @@ class braccio_interface:
         read = int(read)
 
         if (read == exit_val):
-            return 1
+            return EXIT_RET
         
         if (read == 1): # rotation matrix functionality testing
             print("Testing rotation matrix function.")
@@ -222,7 +235,7 @@ class braccio_interface:
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
             self.read_exec()
-            return 0
+            return STAY_RET
         elif (read == 2): # test the displacement vector function
             print("Testing displacement vectors")
             
@@ -237,13 +250,13 @@ class braccio_interface:
             self.arduino_serial.write(msg)
             self.read_exec()
             self.set_kin_vars()
-            return 0
+            return STAY_RET
         elif (read == 3):
             print("Testing the Homogeneous Transform Matrix functionality.")
             self.input_current_or_new_angles()
             self.set_kin_vars() # in case angles changed
             self.print_homo_trans_mats()
-            return 0
+            return STAY_RET
 
-        return 0
+        return STAY_RET
 

@@ -1,6 +1,7 @@
 import serial
 import time
 
+# Communicates with the arduino controller through the serial interface
 class arduino_com:
 
     def __init__(self, port, baudrate, rtimeout):
