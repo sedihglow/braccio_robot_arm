@@ -1,6 +1,9 @@
 import struct
 import sys
 
+# see docs.python.org/3/library/struct.html for more information on struct 
+# methods.
+
 class command_interface:
     # message types
     CMD_MSG = 0x0
@@ -39,6 +42,9 @@ class command_interface:
         msg = 0
         arg = argv
 
+        # Arguemnts for pack, pack(#ofargs->type, msg type, command issued,
+        #                          num of arguments after command issued, argv*)
+        # 9B = 9 args, unsigned char (python type integer)
         if (cmd == self.MX_ANGLE):
             msg = struct.pack("9B", self.CMD_MSG, cmd, 6, arg[0],
                               arg[1], arg[2], arg[3], arg[4], arg[5])

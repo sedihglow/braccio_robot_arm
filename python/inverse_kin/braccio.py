@@ -52,13 +52,15 @@ class braccio_interface:
                     self.verbose_print("Arduino finished sending message")
                     finished = True
 
+    # Directs the user to various interfaces and options for the braccio robot
+    # arm. 
     def interface_director(self):
         exit_val = 4
         cmd_inter_val = 1
         kin_inter_val = 2
         print("This program will allow you to tinker with all the servos via\n"
               "the command interface with the Arduino controller.\n"
-              "It will also showcase an implementation of inverse kinimatics\n"
+              "It will also showcase an implementation of kinimatics\n"
               "for this Braccio robot arm")
 
         # print menu for cmd or inverse kin
@@ -98,7 +100,8 @@ class braccio_interface:
     
     # fills kin.angles with user input
     def get_user_angles(self):
-        print("Enter 6 angles for braccio, servo 0-5 (M1-M6)")
+        print("Enter 6 angles for braccio separated with spaces," 
+              "servo 0-5 (M1-M6)")
         a1, a2, a3, a4, a5, a6 = input("Enter angles: ").split()
         a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
                                   int(a5), int(a6)]
@@ -108,7 +111,8 @@ class braccio_interface:
         self.kin.angles[3] = a4
         self.kin.angles[4] = a5
         self.kin.angles[5] = a6
-
+    
+    # Get user angles for kin.angles or use the current angles from braccio
     def input_current_or_new_angles(self):
             print("Use current Braccio angles or use user input angles?")
             print("1. Current angles.\n"
@@ -145,7 +149,7 @@ class braccio_interface:
               "2. m2, shoulder\n"
               "3. m3, elbow\n"
               "4. m4, wrist vertical\n"
-              "5. m5, write rotation\n"
+              "5. m5, wrist rotation\n"
               "6. m6, gripper\n"
               "7. All angles\n"
               "8. Request all angles\n"
@@ -157,49 +161,63 @@ class braccio_interface:
     # Once written, request the angles from the controller to make sure angles
     # being recorded on host and controller are consistant.
     def cmd_menu_input_send(self):
+        # Menu option values based on print_cmd_menu() options
+        MIN_OPTS     = 1
+        MAX_OPTS     = 10
+        M1_BASE      = 1
+        M2_SHOULDER  = 2
+        M3_ELBOW     = 3
+        M4_WRIST_V   = 4
+        M5_WRIST_R   = 5
+        M6_GRIPPER   = 6
+        ALL_ANGLES   = 7
+        REQUEST_ANGS = 8
+        SET_DLT_POS  = 9
+        EXIT_PROGRAM = 10
+
         self.print_cmd_menu()
         change_angle = input("Enter number: ")
         change_angle = int(change_angle)
 
-        if (change_angle > 10 or change_angle < 1):
+        if (change_angle > MAX_OPTS or change_angle < MIN_OPTS):
             print("Invalid Input")
             return 0
 
-        if (change_angle == 10):
+        if (change_angle == EXIT_PROGRAM):
                 print("exit program")
                 return EXIT_RET
         
-        if (change_angle == 7):
+        if (change_angle == ALL_ANGLES):
             a1, a2, a3, a4, a5, a6 = input("Enter angles: ").split()
             a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
                                       int(a5), int(a6)]
             msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, a1, a2, a3, a4, a5, 
                                          a6)
-        elif (change_angle == 8):
+        elif (change_angle == REQUEST_ANGS):
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
             return STAY_RET
-        elif (change_angle == 9):
+        elif (change_angle == SET_DFLT_POS):
             msg = self.cmd.build_cmd_msg(self.cmd.SET_DFLT_POS)
         else:
             angle = input("Enter angle: ")
             angle = int(angle)
-            if (change_angle == 1):
+            if (change_angle == M1_BASE):
                 msg = self.cmd.build_cmd_msg(self.cmd.M1_ANGLE, angle)
-            elif (change_angle == 2):
+            elif (change_angle == M2_SHOULDER):
                 msg = self.cmd.build_cmd_msg(self.cmd.M2_ANGLE, angle)
-            elif (change_angle == 3):
+            elif (change_angle == M3_ELBOW):
                 msg = self.cmd.build_cmd_msg(self.cmd.M3_ANGLE, angle)
-            elif (change_angle == 4):
+            elif (change_angle == M4_WRIST_V):
                 msg = self.cmd.build_cmd_msg(self.cmd.M4_ANGLE, angle)
-            elif (change_angle == 5):
+            elif (change_angle == M5_WRIST_R):
                 msg = self.cmd.build_cmd_msg(self.cmd.M5_ANGLE, angle)
-            elif (change_angle == 6):
+            elif (change_angle == M6_GRIPPER):
                 msg = self.cmd.build_cmd_msg(self.cmd.M6_ANGLE, angle)
 
         self.arduino_serial.write(msg)
 
-        # retreive changed angles from arduino to ensure it matches in the class
+        # retrieve changed angles from arduino to ensure it matches in the class
         msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
         self.arduino_serial.write(msg)
         return STAY_RET
