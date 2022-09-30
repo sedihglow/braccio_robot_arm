@@ -90,14 +90,7 @@ class braccio_interface:
             print("invalid input")
             
         return STAY_RET;
-
-    def kin_menu(self):
-        print("Kinematics functionalities")
-        print("1. Rotation Matrix function\n"
-              "2. Displacement Vectors\n"
-              "3. Homogeneous Transform Matrix.\n"
-              "4. exit")
-    
+   
     # fills kin.angles with user input
     def get_user_angles(self):
         print("Enter 6 angles for braccio separated with spaces," 
@@ -222,17 +215,29 @@ class braccio_interface:
         self.arduino_serial.write(msg)
         return STAY_RET
 
+    def kin_menu(self):
+        print("Kinematics functionalities")
+        print("1. Rotation Matrix function\n"
+              "2. Displacement Vectors\n"
+              "3. Homogeneous Transform Matrix.\n"
+              "4. exit")
+ 
+    # Interface to execute kinematics, forward and inverse.
     def kin_interface(self):
-        exit_val = 4
-        self.kin_menu()
+        # menu inputs based on kin_menu() 
+        ROT_MAT_IN    = 1 # Rotation Matrix Functionality input
+        DISP_VECT_IN  = 2 # Displacement Vectors input
+        HOMO_TRANS_IN = 3 # Homogeneous Transform Matrix Funcionality input
+        EXIT_VAL_IN   = 4
 
+        self.kin_menu()
         read = input("Enter number: ")
         read = int(read)
 
-        if (read == exit_val):
+        if (read == EXIT_VAL):
             return EXIT_RET
         
-        if (read == 1): # rotation matrix functionality testing
+        if (read == ROT_MAT_IN): # rotation matrix functionality testing
             print("Testing rotation matrix function.")
             
             self.input_current_or_new_angles()
@@ -254,7 +259,7 @@ class braccio_interface:
             self.arduino_serial.write(msg)
             self.read_exec()
             return STAY_RET
-        elif (read == 2): # test the displacement vector function
+        elif (read == DISP_VECT_IN): # test the displacement vector function
             print("Testing displacement vectors")
             
             self.input_current_or_new_angles()
@@ -269,7 +274,7 @@ class braccio_interface:
             self.read_exec()
             self.set_kin_vars()
             return STAY_RET
-        elif (read == 3):
+        elif (read == HOMO_TRANS_IN): # Homogeneous transform functionality
             print("Testing the Homogeneous Transform Matrix functionality.")
             self.input_current_or_new_angles()
             self.set_kin_vars() # in case angles changed

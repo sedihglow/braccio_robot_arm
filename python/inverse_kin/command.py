@@ -6,16 +6,16 @@ import sys
 
 class command_interface:
     # message types
-    CMD_MSG = 0x0
+    CMD_MSG   = 0x0
     PRINT_MSG = 0x1
-    ACK = 0x2
-    FINISH = 0x3
+    ACK       = 0x2
+    FINISH    = 0x3
 
     # incomming message command
     PRINT_GENERAL = 0x0
-    PRINT_ERROR = 0x1
+    PRINT_ERROR   = 0x1
     PRINT_VERBOSE = 0x2
-    SEND_ANGLES = 0x3
+    SEND_ANGLES   = 0x3
 
     # outgoing message command
     M1_ANGLE = 0x1
@@ -31,20 +31,22 @@ class command_interface:
     def __init__(self, verbose):
         self.verbose = verbose 
     
+    # prints the string without adding '\n'
     def sys_print(self, msg):
         sys.stdout.write(msg)
 
     def print_verbose(self, msg):
         if (self.verbose):
-            self.sys_print(msg) # prints the string without adding '\n'
-        
+            self.sys_print(msg) 
+    
+    # Builds a command type message in proper format for writing to serial
     def build_cmd_msg(self, cmd, *argv):
         msg = 0
         arg = argv
 
         # Arguemnts for pack, pack(#ofargs->type, msg type, command issued,
         #                          num of arguments after command issued, argv*)
-        # 9B = 9 args, unsigned char (python type integer)
+        # 9B = 9 args, unsigned char (python type - integer)
         if (cmd == self.MX_ANGLE):
             msg = struct.pack("9B", self.CMD_MSG, cmd, 6, arg[0],
                               arg[1], arg[2], arg[3], arg[4], arg[5])
@@ -58,7 +60,9 @@ class command_interface:
             msg = struct.pack("3B", self.CMD_MSG, cmd, 0)
         
         return msg
-
+    
+    # Parse out a incomming message from the arduino controller.
+    # Parsed messages unpack as a tupile even if its one value.
     def parse_in_msg(self, msg):
         parsed = 0
         
@@ -76,7 +80,9 @@ class command_interface:
             parsed = struct.unpack("3B{}B".format(parsed[2]), msg)
 
         return parsed
-
+    
+    # Execute a command from incoming p_msg (parsed message) and place angles
+    # in message into angles argument
     def exec_command(self, p_msg, angles):
         i = 0
         param = []
@@ -102,7 +108,8 @@ class command_interface:
             # copy param list to angles list
             for i in range(0,6):
                 angles[i] = param[i]
-
+    
+    # Execute a print from an incoming parsed message
     def exec_print(self, p_msg):
         i = 0
 
@@ -126,5 +133,4 @@ class command_interface:
             self.sys_print("BOARD ERROR: {}".format(to_print.decode()))
         elif (cmd == self.PRINT_VERBOSE):
             self.print_verbose(to_print.decode())
-
 

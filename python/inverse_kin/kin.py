@@ -1,6 +1,8 @@
 import numpy as np
 
+# Handles the kinematic functions definitions and variables
 class kinematics:
+    # Length in cm
     A0_LEN = 6   # base to shoulder
     A1_LEN = 13  # shoulder to elbow
     A2_LEN = 12  # elbow to wrist vertical
