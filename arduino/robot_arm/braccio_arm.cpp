@@ -15,7 +15,7 @@ Servo wrist_rot;
 Servo gripper;
 
 /*
- * Initializes braccio arm with Stream Object for serial communication and 
+ * Initializes braccio arm with Stream Object for serial communication and
  * sets all angles to their default safe state
  */
 braccio_arm::braccio_arm(Stream &serial): serial(serial)
@@ -86,9 +86,9 @@ int braccio_arm::send_all_angles()
 
     set_parsed_msg(&out_msg, CMD_MSG, SEND_ANGLES, NUM_ANGLES, param);
     if (errno) {
-        send_error("Failed to set parameters in parsed message.\n"); 
+        send_error("Failed to set parameters in parsed message.\n");
         errno = SUCCESS;
-        return FAILURE;   
+        return FAILURE;
     }
 
     create_send_msg(&out_msg);
@@ -107,6 +107,7 @@ void braccio_arm::send_ack()
     serial.write(ack, 2);
 }
 
+/* send a finish message to tell the host we are done sending messages/cmds */
 void braccio_arm::send_finish()
 {
     uint8_t finish[2] = {1, FINISH};
@@ -123,12 +124,12 @@ int braccio_arm::send_print(const char *format, ...)
     va_start(args, format);
 
     vsnprintf_check((char*)set_msg, PARAM_BUFF, format, args);
-    set_parsed_msg(&out_msg, PRINT_MSG, PRINT_GENERAL, 
+    set_parsed_msg(&out_msg, PRINT_MSG, PRINT_GENERAL,
                    PARAM_STRLEN, set_msg);
     if (errno) {
         send_error("Failed to set parameters in parsed message.\n");
         errno = SUCCESS;
-        return FAILURE;   
+        return FAILURE;
     }
 
     create_send_msg(&out_msg);
@@ -154,12 +155,12 @@ int braccio_arm::send_error(const char *format, ...)
     va_start(args, format);
 
     vsnprintf_check((char*)set_msg, PARAM_BUFF, format, args);
-    set_parsed_msg(&out_msg, PRINT_MSG, PRINT_ERROR, 
+    set_parsed_msg(&out_msg, PRINT_MSG, PRINT_ERROR,
                    PARAM_STRLEN, set_msg);
     if (errno) {
-        send_error("Failed to set parameters in parsed message.\n"); 
+        send_error("Failed to set parameters in parsed message.\n");
         errno = SUCCESS;
-        return FAILURE;   
+        return FAILURE;
     }
 
     create_send_msg(&out_msg);
@@ -188,12 +189,12 @@ int braccio_arm::send_verbose(const char *format, ...)
 
     vsnprintf_check((char*)set_msg, PARAM_BUFF, format, args);
 
-    set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE, 
+    set_parsed_msg(&out_msg, PRINT_MSG, PRINT_VERBOSE,
                    PARAM_STRLEN, set_msg);
     if (errno) {
         send_error("Failed to set parameters in parsed message.\n");
         errno = SUCCESS;
-        return FAILURE;   
+        return FAILURE;
     }
 
     create_send_msg(&out_msg);
@@ -208,21 +209,21 @@ int braccio_arm::send_verbose(const char *format, ...)
     return SUCCESS;
 }
 
-/* 
+/*
  * Sets the parsed_io_msg struct with desired values, calculates msg_size
  * if param_len value is PARAM_STRLEN, it will strnlen the length of the param
  * list (for strings).
  */
-int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type, 
-                                 uint8_t cmd, uint8_t param_len, 
+int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type,
+                                 uint8_t cmd, uint8_t param_len,
                                  uint8_t *param)
 {
     int i;
     int k;
-    
+
     fill->msg_type = msg_type;
     fill->cmd = cmd;
-    
+
     // If i dont do fill->param_len here compiler complains it may not be init
     fill->param_len = param_len;
     if (param_len == PARAM_STRLEN) { // treat param as string of variable length
@@ -236,7 +237,7 @@ int braccio_arm::set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type,
     fill->param_len = param_len;
     for (i=0, k=0; i < param_len; ++i, ++k)
         fill->param[i] = param[k];
-        
+
     // exclude msg_size in size so reciever can parse 1 byte then parse the rest
     fill->msg_size = param_len + MSG_SIZE_NO_PARAM - 1;
     return SUCCESS;
@@ -249,21 +250,21 @@ int braccio_arm::parse_msg(uint8_t *msg, parsed_msg_s *in_msg)
     uint8_t k = 0;
 
     // parse msg type
-    in_msg->msg_type = msg[i++]; 
+    in_msg->msg_type = msg[i++];
 
     // parse cmd type
     in_msg->cmd = msg[i++];
-    
+
     // parse parameter length
     in_msg->param_len = msg[i++];
 
     if (in_msg->param_len > PARAM_BUFF)
         return errno = EINVAL;
-    
+
     // parse parameters
     for (k=0; k < in_msg->param_len; ++k)
         in_msg->param[k] = msg[i++];
-    
+
     // this is not sent by the python code but is set for initialization
     in_msg->msg_size = in_msg->param_len + MSG_SIZE_NO_PARAM - 1;
 
@@ -290,31 +291,31 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
         send_verbose("Changed M1 angle to %u\n", angles.m1);
     break;
     case M2_ANGLE:
-        angles.m2 = check_angle(in_msg->param[0], M2_MIN_ANGLE, M2_MAX_ANGLE); 
+        angles.m2 = check_angle(in_msg->param[0], M2_MIN_ANGLE, M2_MAX_ANGLE);
         braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
                               angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M2 angle to %u\n", angles.m2);
     break;
     case M3_ANGLE:
-        angles.m3 = check_angle(in_msg->param[0], M3_MIN_ANGLE, M3_MAX_ANGLE); 
+        angles.m3 = check_angle(in_msg->param[0], M3_MIN_ANGLE, M3_MAX_ANGLE);
         braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
                               angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M3 angle to %u\n", angles.m3);
     break;
     case M4_ANGLE:
-        angles.m4 = check_angle(in_msg->param[0], M4_MIN_ANGLE, M4_MAX_ANGLE); 
+        angles.m4 = check_angle(in_msg->param[0], M4_MIN_ANGLE, M4_MAX_ANGLE);
         braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
                               angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M4 angle to %u\n", angles.m4);
     break;
     case M5_ANGLE:
-        angles.m5 = check_angle(in_msg->param[0], M5_MIN_ANGLE, M5_MAX_ANGLE); 
+        angles.m5 = check_angle(in_msg->param[0], M5_MIN_ANGLE, M5_MAX_ANGLE);
         braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
                               angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M5 angle to %u\n", angles.m5);
     break;
     case M6_ANGLE:
-        angles.m6 = check_angle(in_msg->param[0], M6_MIN_ANGLE, M6_MAX_ANGLE); 
+        angles.m6 = check_angle(in_msg->param[0], M6_MIN_ANGLE, M6_MAX_ANGLE);
         braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
                               angles.m4, angles.m5, angles.m6);
         send_verbose("Changed M6 angle to %u\n", angles.m6);
@@ -325,17 +326,17 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
         braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
                               angles.m4, angles.m5, angles.m6);
         send_verbose("Changed all angles, "
-                     "M1: %d, M2: %d, M3: %d, M4: %d, M5: %d, M6: %d\n", 
+                     "M1: %d, M2: %d, M3: %d, M4: %d, M5: %d, M6: %d\n",
                      angles.m1, angles.m2, angles.m3, angles.m4, angles.m5,
                      angles.m6);
     break;
     case REQUEST_MX_ANGLE:
-        send_all_angles(); 
+        send_all_angles();
         send_verbose("Sent all angles, "
-                     "M1: %d, M2: %d, M3: %d, M4: %d, M5: %d, M6: %d\n", 
+                     "M1: %d, M2: %d, M3: %d, M4: %d, M5: %d, M6: %d\n",
                      angles.m1, angles.m2, angles.m3, angles.m4, angles.m5,
                      angles.m6);
-    break; 
+    break;
     case SET_DFLT_POS:
         set_default_pos();
         break;
@@ -376,7 +377,7 @@ int braccio_arm::create_io_msg(parsed_msg_s *msg, io_msg_s *io_msg)
     io_msg->msg[i++] = msg->msg_size;
     io_msg->msg[i++] = msg->msg_type;
     io_msg->msg[i++] = msg->cmd;
-    
+
     if (msg->param_len > PARAM_BUFF)
         return errno = EINVAL;
 
@@ -384,7 +385,7 @@ int braccio_arm::create_io_msg(parsed_msg_s *msg, io_msg_s *io_msg)
 
     for (k=0; k < msg->param_len; ++k)
         io_msg->msg[i++] = msg->param[k];
-    
+
     io_msg->len = MSG_SIZE_NO_PARAM + k;
 
     return SUCCESS;
@@ -421,19 +422,19 @@ uint8_t braccio_arm::check_angle(uint8_t angle, uint8_t min, uint8_t max)
 /* checks all 6 angles provided to ensure they are in range of the min and max
  * of each corresponding servo.
  */
-void braccio_arm::check_all_angles(uint8_t a1, uint8_t a2, uint8_t a3, 
+void braccio_arm::check_all_angles(uint8_t a1, uint8_t a2, uint8_t a3,
                                    uint8_t a4, uint8_t a5, uint8_t a6)
 {
     angles.m1 = check_angle(a1, M1_MIN_ANGLE, M1_MAX_ANGLE);
-    angles.m2 = check_angle(a2, M2_MIN_ANGLE, M2_MAX_ANGLE); 
-    angles.m3 = check_angle(a3, M3_MIN_ANGLE, M3_MAX_ANGLE); 
-    angles.m4 = check_angle(a4, M4_MIN_ANGLE, M4_MAX_ANGLE); 
-    angles.m5 = check_angle(a5, M5_MIN_ANGLE, M5_MAX_ANGLE); 
+    angles.m2 = check_angle(a2, M2_MIN_ANGLE, M2_MAX_ANGLE);
+    angles.m3 = check_angle(a3, M3_MIN_ANGLE, M3_MAX_ANGLE);
+    angles.m4 = check_angle(a4, M4_MIN_ANGLE, M4_MAX_ANGLE);
+    angles.m5 = check_angle(a5, M5_MIN_ANGLE, M5_MAX_ANGLE);
     angles.m6 = check_angle(a6, M6_MIN_ANGLE, M6_MAX_ANGLE);
 }
 
 /*
- * identical input to vsnprintf() (see man 3 printf or vsnprintf() for more 
+ * identical input to vsnprintf() (see man 3 printf or vsnprintf() for more
  * info)
  * Returns SUCCESS or FAILURE, unlike vsnprintf() which returns the number
  * written into the buffer. FAILURE means that the format string was too long
