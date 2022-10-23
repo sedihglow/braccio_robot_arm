@@ -8,9 +8,10 @@ class braccio_interface:
 
     def __init__(self, verbose, port, baudrate, rtimeout):
         self.verbose = verbose
+		
         self.arduino_serial = arduino_com(port, baudrate, rtimeout)
-        self.cmd = command_interface(verbose)
 
+        self.cmd = command_interface(verbose)
         self.kin = kinematics()
     
     def verbose_print(self, msg):
@@ -32,6 +33,8 @@ class braccio_interface:
     # Read a message from the braccio controller.
     # NOTE: Loops waiting for the finish sending command from the controller. 
     #       Only call when something should be returning from the controller.
+	# TODO: Make a timer so if there is no response it moves on or calls
+	#		an error.
     def read_exec(self):
         finished = False
         while (not finished):
