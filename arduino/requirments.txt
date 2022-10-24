@@ -1,0 +1,9 @@
+server.h - testing on version 1.1.8
+-- Download the servo library in the arduino IDE, just search for servo
+   in the library manager and install.
+
+Arduino SAM boards (32-bit ARM Cortex-M3) -- tested on version 1.6.12
+-- in board manager in the arduino IDE search due and install the package to be
+   able to upload into the board. Board will appear in the board selection list
+   after install
+					
