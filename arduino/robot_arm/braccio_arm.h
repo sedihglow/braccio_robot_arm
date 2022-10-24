@@ -9,23 +9,23 @@
 
 #define DFLT_STEP_DELAY 20 // ms
 
-#define MSG_SIZE_NO_PARAM 4 // msg_len, msg_type, cmd, param_len, 4 bytes
+#define MSG_SIZE_NO_PARAM 4 // msg_len, msg_type, cmd, param_len = 4 bytes
 #define PARAM_BUFF 150
 #define IO_MSG_BUFF (MSG_SIZE_NO_PARAM + PARAM_BUFF)
 
 #define PARAM_STRLEN 0
 
 // msg type definitions
-#define CMD_MSG 0x0
+#define CMD_MSG   0x0
 #define PRINT_MSG 0x1
-#define ACK 0x2
-#define FINISH 0x3
+#define ACK       0x2
+#define FINISH    0x3
 
 // outgoing cmd definitions
 #define PRINT_GENERAL 0x0
-#define PRINT_ERROR 0x1
+#define PRINT_ERROR   0x1
 #define PRINT_VERBOSE 0x2
-#define SEND_ANGLES 0x3
+#define SENT_ANGLES   0x3
 
 // incomming cammands
 #define M1_ANGLE 0x1 // base
@@ -59,7 +59,7 @@
 #define M1_SAFE_ANGLE 0
 #define M2_SAFE_ANGLE 140
 #define M3_SAFE_ANGLE 0
-#define M4_SAFE_ANGLE 10 
+#define M4_SAFE_ANGLE 10
 #define M5_SAFE_ANGLE 90
 #define M6_SAFE_ANGLE 73
 
@@ -88,27 +88,27 @@ typedef struct braccio_angles {
 
 class braccio_arm {
     public:
-        braccio_arm(Stream &serial); 
+        braccio_arm(Stream &serial);
         ~braccio_arm();
 
-        void init_arm(int soft_start_level=SOFT_START_DEFAULT); 
+        void init_arm(int soft_start_level=SOFT_START_DEFAULT);
         void set_default_pos();
 
         bool serial_avail();
         int serial_read(uint8_t *buff, size_t len);
-    
+
         int set_parsed_msg(parsed_msg_s *fill, uint8_t msg_type, uint8_t cmd,
                            uint8_t param_len, uint8_t *param);
-        
+
         int parse_msg(uint8_t *msg, parsed_msg_s *in_msg);
         int exec_command(parsed_msg_s *in_msg);
-        
+
         void send_ack();
         void send_finish();
         int send_print(const char *format, ...);
         int send_verbose(const char *format, ...);
         int send_error(const char *format, ...);
-        int send_all_angles(); 
+        int send_all_angles();
 
         int create_send_msg(parsed_msg_s *msg);
         int create_io_msg(parsed_msg_s *msg, io_msg_s *io_msg);
@@ -118,16 +118,16 @@ class braccio_arm {
         uint8_t check_angle(uint8_t angle, uint8_t min, uint8_t max);
         void check_all_angles(uint8_t a1, uint8_t a2, uint8_t a3, uint8_t a4,
                               uint8_t a5, uint8_t a6);
-        int vsnprintf_check(char *buff, int size, const char *format, 
-                            va_list args); 
-         
+        int vsnprintf_check(char *buff, int size, const char *format,
+                            va_list args);
+
         Stream &serial;
         braccio_angles_s angles;
 
         /*
          * NOTE: There is a _Braccio class object declared as extern globably in
          *       Braccio.h named Braccio. We must declare our servos globally
-         *       in the .cpp file for externs in Braccio.cpp. 
+         *       in the .cpp file for externs in Braccio.cpp.
          *       I commented out the global braccio class extern in the llibrary
          *       header and declared my own variable here.
          *       If you downloaded Braccio.h via arduino IDE it is usually

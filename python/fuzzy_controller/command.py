@@ -15,7 +15,7 @@ class command_interface:
     PRINT_GENERAL = 0x0
     PRINT_ERROR   = 0x1
     PRINT_VERBOSE = 0x2
-    SEND_ANGLES   = 0x3
+    SENT_ANGLES   = 0x3
 
     # outgoing message command
     M1_ANGLE = 0x1
@@ -104,7 +104,7 @@ class command_interface:
             param.append(p_msg[i])
             i += 1
 
-        if (cmd == self.SEND_ANGLES):
+        if (cmd == self.SENT_ANGLES):
             # copy param list to angles list
             for i in range(0,6):
                 angles[i] = param[i]

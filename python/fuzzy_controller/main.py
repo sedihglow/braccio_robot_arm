@@ -19,9 +19,9 @@ if __name__ == "__main__":
     braccio.begin_com()
 
     try:
-        exit = 0
-        while (not exit):
-            exit = braccio.interface_director()
+        stay_flag = True
+        while (stay_flag):
+            stay_flag = braccio.interface_director()
     except KeyboardInterrupt:
         print("exiting...")
     finally:

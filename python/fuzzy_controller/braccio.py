@@ -1,11 +1,11 @@
 from command import command_interface
 from arduino_serial import arduino_com
 from kin import kinematics
-#from fuzzy_controller import fuzzy_controller
+from fuzzy_controller import fuzzy_controller
 
 class braccio_interface:
-    EXIT_RET = 1 # Exit value to exit from menu or program
-    STAY_RET = 0 # return value for interfaces staying in program
+    EXIT_FLAG_RET = False # Exit value to exit from menu or program
+    STAY_FLAG_RET = True # return value for interfaces staying in program
 
     def __init__(self, verbose, port, baudrate, rtimeout):
         self.verbose = verbose
@@ -15,8 +15,8 @@ class braccio_interface:
         self.cmd = command_interface(verbose)
         self.kin = kinematics()
 
-        #self.fuzzy_con = fuzzy_controller(self.arduino_serial,
-        #                                  self.kin)
+        self.fuzzy_con = fuzzy_controller(self.arduino_serial,
+                                          self.kin)
     
         print("\npost fuzzy logic\n")
     def verbose_print(self, msg):
@@ -55,7 +55,7 @@ class braccio_interface:
                     self.cmd.exec_print(p_msg)
                 elif(p_msg[0] == self.cmd.CMD_MSG):
                     self.cmd.exec_command(p_msg, self.kin.angles)
-                    self.set_kin_vars()
+                    self.kin.set_kin_vars()
                 elif(p_msg[0] == self.cmd.FINISH):
                     self.verbose_print("Arduino finished sending message")
                     finished = True
@@ -63,49 +63,78 @@ class braccio_interface:
     # Directs the user to various interfaces and options for the braccio robot
     # arm. 
     def interface_director(self):
-        exit_val = 4
-        cmd_inter_val = 1
-        kin_inter_val = 2
-        print("This program will allow you to tinker with all the servos via\n"
-              "the command interface with the Arduino controller.\n"
+        EXIT_VAL = 4
+        CMD_INTER_VAL  = 1 # cmd interface val
+        KIN_INTER_VAL  = 2 # kinematics interface val
+        FUZZY_CONT_VAL = 3 # fuzzy controller val
+
+        print("\nThis program will allow you to tinker with all the servos\n"
+              "via the command interface with the Arduino controller.\n"
               "It will also showcase an implementation of kinimatics\n"
               "for this Braccio robot arm")
 
-        # print menu for cmd or inverse kin
-        print("Which functionality would you like to run?") 
-        print("1. Command Interface (Tinker with servos and commands)\n"
-              "2. Kinematics\n"
-              "4. exit")
-        read = input("Enter Number: ")
-        read = int(read)
+        digit = False
+        while (not digit):
+            # print menu for cmd or inverse kin
+            print("\nWhich functionality would you like to run?") 
+            print("1. Command Interface (Tinker with servos and commands)\n"
+                  "2. Kinematics\n"
+                  "3. Fuzzy Controller (Example of fuzzy controller w/ braccio)\n"
+                  "4. exit")
+            read = input("Enter Number: ")
 
-        if (read == exit_val):
-            return self.EXIT_RET;
+            digit = read.isdigit()
+            if (digit):
+                read = int(read)
 
-        if (read == cmd_inter_val): # cmd interface
-            exit = False
-            while (not exit):
-                exit = self.cmd_menu_input_send()
+        if (read == EXIT_VAL):
+            return self.EXIT_FLAG_RET;
 
-                print("reading messages from Arduino")
-                if (not exit):
+        if (read == CMD_INTER_VAL): # cmd interface
+            stay_flag = self.STAY_FLAG_RET
+            while (stay_flag):
+                stay_flag = self.cmd_menu_input_send()
+
+                print("\nreading/exec messages from Arduino")
+                if (stay_flag):
                     self.read_exec()
-        elif (read == kin_inter_val): # inverse kin
-            exit = False
-            while (not exit):
-                exit = self.kin_interface()
+        elif (read == KIN_INTER_VAL): # inverse kin
+            stay_flag = self.STAY_FLAG_RET
+            while (stay_flag):
+                stay_flag = self.kin_interface()
+        elif (read == FUZZY_CONT_VAL): # fuzzy controller example
+            stay_flag = self.STAY_FLAG_RET
+            while (stay_flag):
+                stay_flag = self.fuzzy_controller_interface()
         else:
-            print("invalid input")
+            print("\ninvalid input")
             
-        return self.STAY_RET;
+        return self.STAY_FLAG_RET;
    
     # fills kin.angles with user input
     def get_user_angles(self):
-        print("Enter 6 angles for braccio separated with spaces," 
-              "servo 0-5 (M1-M6)")
-        a1, a2, a3, a4, a5, a6 = input("Enter angles: ").split()
-        a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
-                                  int(a5), int(a6)]
+        NUM_SERVOS = 6
+
+        digit = False
+        while (not digit):
+            print("\nEnter 6 angles for braccio separated with commas," 
+                  "servo 0-5 (M1-M6)")
+            a1, a2, a3, a4, a5, a6 = input("Enter angles (M1, M2, M3, M4, M5, "
+                                           "M6): ").split(", ")
+
+            angles = [a1, a2, a3, a4, a5, a6]
+            for angle in range(0, NUM_SERVOS):
+                digit = angles[angle].isdigit()
+                if (not digit):
+                    break
+
+                angles[angle] = int(angles[angle])
+
+            if (digit):
+
+
+            a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
+                                      int(a5), int(a6)]
         self.kin.angles[0] = a1
         self.kin.angles[1] = a2
         self.kin.angles[2] = a3
@@ -115,37 +144,23 @@ class braccio_interface:
     
     # Get user angles for kin.angles or use the current angles from braccio
     def input_current_or_new_angles(self):
-            print("Use current Braccio angles or use user input angles?")
+        USER_ANGLE_VAL = 2
+
+        digit = False
+        while (not digit):
+            print("\nUse current Braccio angles or use user input angles?")
             print("1. Current angles.\n"
                   "2. User input angles.")
             read = input("Enter number: ")
-            read = int(read)
-
-            if (read == 2):
-                self.get_user_angles()
-
-    # set kinematic variables with angles that are set
-    def set_kin_vars(self): 
-        self.kin.create_rot_matrix()
-        self.kin.create_fill_disp_vects()
-        self.kin.create_homo_trans()
+            
+            digit = read.isdigit()
+            if (digit):
+                read = int(read)
+                if (read == USER_ANGLE_VAL):
+                    self.get_user_angles()
     
-    def print_homo_trans_mats(self):
-        print("--Homogeneous transform 0_1--")
-        print(self.kin.homo_trans_mat[0])
-        print("--Homogeneous transform 1_2--")
-        print(self.kin.homo_trans_mat[1])
-        print("--Homogeneous transform 2_3--")
-        print(self.kin.homo_trans_mat[2])
-        print("--Homogeneous transform 3_4--")
-        print(self.kin.homo_trans_mat[3])
-        print("--Homogeneous transform 4_5--")
-        print(self.kin.homo_trans_mat[4])
-        print("--Homogeneous transform 0_5--")
-        print(self.kin.homo_trans_mat[5])
-
     def print_cmd_menu(self):
-        print("Choose angle to set or command to send\n"
+        print("\nChoose angle to set or command to send\n"
               "1. m1, base\n"
               "2. m2, shoulder\n"
               "3. m3, elbow\n"
@@ -173,23 +188,29 @@ class braccio_interface:
         M6_GRIPPER   = 6
         ALL_ANGLES   = 7
         REQUEST_ANGS = 8
-        SET_DLT_POS  = 9
+        SET_DFLT_POS  = 9
         EXIT_PROGRAM = 10
 
-        self.print_cmd_menu()
-        change_angle = input("Enter number: ")
-        change_angle = int(change_angle)
+        digit = False
+        while (not digit):
+            self.print_cmd_menu()
+            change_angle = input("Enter number: ")
+
+            digit = change_angle.isdigit()
+            if (digit):
+                change_angle = int(change_angle)
 
         if (change_angle > MAX_OPTS or change_angle < MIN_OPTS):
-            print("Invalid Input")
-            return 0
+            print("\nInvalid Input")
+            return self.STAY_FLAG_RET
 
         if (change_angle == EXIT_PROGRAM):
-                print("exit program")
-                return self.EXIT_RET
+                print("\nexit program")
+                return self.EXIT_FLAG_RET
         
         if (change_angle == ALL_ANGLES):
-            a1, a2, a3, a4, a5, a6 = input("Enter angles: ").split()
+            a1, a2, a3, a4, a5, a6 = input("Enter angles (M1, M2, M3, M4, M5, "
+                                           "M6): ").split(', ')
             a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
                                       int(a5), int(a6)]
             msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, a1, a2, a3, a4, a5, 
@@ -197,12 +218,18 @@ class braccio_interface:
         elif (change_angle == REQUEST_ANGS):
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
-            return self.STAY_RET
+            return self.STAY_FLAG_RET
         elif (change_angle == SET_DFLT_POS):
             msg = self.cmd.build_cmd_msg(self.cmd.SET_DFLT_POS)
         else:
-            angle = input("Enter angle: ")
-            angle = int(angle)
+            digit = False
+            while (not digit):
+                angle = input("Enter angle: ")
+
+                digit = angle.isdigit()
+                if (digit):
+                    angle = int(angle)
+
             if (change_angle == M1_BASE):
                 msg = self.cmd.build_cmd_msg(self.cmd.M1_ANGLE, angle)
             elif (change_angle == M2_SHOULDER):
@@ -221,10 +248,10 @@ class braccio_interface:
         # retrieve changed angles from arduino to ensure it matches in the class
         msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
         self.arduino_serial.write(msg)
-        return self.STAY_RET
+        return self.STAY_FLAG_RET
 
     def kin_menu(self):
-        print("Kinematics functionalities")
+        print("\nKinematics functionalities")
         print("1. Rotation Matrix function\n"
               "2. Displacement Vectors\n"
               "3. Homogeneous Transform Matrix.\n"
@@ -238,37 +265,53 @@ class braccio_interface:
         HOMO_TRANS_IN = 3 # Homogeneous Transform Matrix Funcionality input
         EXIT_VAL_IN   = 4
 
-        self.kin_menu()
-        read = input("Enter number: ")
-        read = int(read)
+        digit = False
+        while (not digit):
+            self.kin_menu()
+            read = input("Enter number: ")
+            
+            digit = read.isdigit() 
+            if (digit):
+                read = int(read)
 
-        if (read == EXIT_VAL):
-            return self.EXIT_RET
+        if (read == EXIT_VAL_IN):
+            return self.EXIT_FLAG_RET
         
         if (read == ROT_MAT_IN): # rotation matrix functionality testing
             print("Testing rotation matrix function.")
             
             self.input_current_or_new_angles()
 
-            print("Enter starting frame for rot matrix")
-            start_frame = input("Enter frame number (0-4)")
-            start_frame = int(start_frame)
+            digit = False
+            while (not digit):
+                print("\nEnter starting frame for rot matrix")
+                start_frame = input("Enter starting frame number (0-4): ")
 
-            print("Enter ending frame for rot matrix")
-            end_frame = input("Enter frame number (0-5): ")
-            end_frame = int(end_frame)
+                digit = start_frame.isdigit()
+                if (digit):
+                    start_frame = int(start_frame)
+
+            digit = False
+            while (not digit):
+                print("\nEnter ending frame for rot matrix")
+                end_frame = input("Enter ending frame number (0-5): ")
+
+                digit = end_frame.isdigit()
+                if (digit):
+                    end_frame = int(end_frame)
 
             rot_matrix = self.kin.create_rot_matrix(start_frame,end_frame)
-            print("--rotation matrix {:d}_{:d}--".format(start_frame, end_frame))
+            print("\n--rotation matrix {:d}_{:d}--".format(start_frame, 
+                                                           end_frame))
             print(rot_matrix)
             
             # reset angles to match braccio
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
             self.read_exec()
-            return self.STAY_RET
+            return self.STAY_FLAG_RET
         elif (read == DISP_VECT_IN): # test the displacement vector function
-            print("Testing displacement vectors")
+            print("\nTesting displacement vectors")
             
             self.input_current_or_new_angles()
             
@@ -280,14 +323,16 @@ class braccio_interface:
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
             self.read_exec()
-            self.set_kin_vars()
-            return self.STAY_RET
+            return self.STAY_FLAG_RET
         elif (read == HOMO_TRANS_IN): # Homogeneous transform functionality
-            print("Testing the Homogeneous Transform Matrix functionality.")
+            print("\nTesting the Homogeneous Transform Matrix functionality.")
             self.input_current_or_new_angles()
-            self.set_kin_vars() # in case angles changed
-            self.print_homo_trans_mats()
-            return self.STAY_RET
+            self.kin.set_kin_vars() # in case angles changed
+            self.kin.print_homo_trans_mats()
+            return self.STAY_FLAG_RET
 
-        return self.STAY_RET
+        return self.STAY_FLAG_RET
 
+    def fuzzy_controller_interface(self):
+        print("\nin fuzy controller interface\n")         
+        return self.EXIT_FLAG_RET

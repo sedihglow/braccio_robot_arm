@@ -84,7 +84,7 @@ int braccio_arm::send_all_angles()
     uint8_t param[NUM_ANGLES] = {angles.m1, angles.m2, angles.m3, angles.m4,
                                  angles.m5, angles.m6};
 
-    set_parsed_msg(&out_msg, CMD_MSG, SEND_ANGLES, NUM_ANGLES, param);
+    set_parsed_msg(&out_msg, CMD_MSG, SENT_ANGLES, NUM_ANGLES, param);
     if (errno) {
         send_error("Failed to set parameters in parsed message.\n");
         errno = SUCCESS;

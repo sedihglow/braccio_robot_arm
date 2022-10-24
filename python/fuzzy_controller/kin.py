@@ -58,6 +58,12 @@ class kinematics:
                                                  [0,0,0,0]]))
         self.create_homo_trans()
         
+
+    # set kinematic variables with angles that are set
+    def set_kin_vars(self): 
+        self.create_rot_matrix()
+        self.create_fill_disp_vects()
+        self.create_homo_trans()
     
     # creates and fills the homogenous transform matricies, last index is 0_5
     # returns H_0_5 matrix which is index 5 of the homo_trans_mat list
@@ -81,6 +87,19 @@ class kinematics:
                                   self.homo_trans_mat[4])
         return self.homo_trans_mat[5]
 
+    def print_homo_trans_mats(self):
+        print("--Homogeneous transform 0_1--")
+        print(self.homo_trans_mat[0])
+        print("--Homogeneous transform 1_2--")
+        print(self.homo_trans_mat[1])
+        print("--Homogeneous transform 2_3--")
+        print(self.homo_trans_mat[2])
+        print("--Homogeneous transform 3_4--")
+        print(self.homo_trans_mat[3])
+        print("--Homogeneous transform 4_5--")
+        print(self.homo_trans_mat[4])
+        print("--Homogeneous transform 0_5--")
+        print(self.homo_trans_mat[5])
 
     def print_disp_vects(self):
         print("Displacement Vectors")

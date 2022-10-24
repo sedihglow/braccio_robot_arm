@@ -25,7 +25,7 @@
 #define PRINT_GENERAL 0x0
 #define PRINT_ERROR 0x1
 #define PRINT_VERBOSE 0x2
-#define SEND_ANGLES 0x3
+#define SENT_ANGLES 0x3
 
 // incomming cammands
 #define M1_ANGLE 0x1 // base
