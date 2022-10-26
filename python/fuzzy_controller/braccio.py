@@ -6,6 +6,7 @@ from fuzzy_controller import fuzzy_controller
 class braccio_interface:
     EXIT_FLAG_RET = False # Exit value to exit from menu or program
     STAY_FLAG_RET = True # return value for interfaces staying in program
+    NUM_SERVOS = 6
 
     def __init__(self, verbose, port, baudrate, rtimeout):
         self.verbose = verbose
@@ -18,7 +19,6 @@ class braccio_interface:
         self.fuzzy_con = fuzzy_controller(self.arduino_serial,
                                           self.kin)
     
-        print("\npost fuzzy logic\n")
     def verbose_print(self, msg):
         if (self.verbose):
             print(msg)
@@ -113,34 +113,24 @@ class braccio_interface:
    
     # fills kin.angles with user input
     def get_user_angles(self):
-        NUM_SERVOS = 6
-
         digit = False
         while (not digit):
             print("\nEnter 6 angles for braccio separated with commas," 
                   "servo 0-5 (M1-M6)")
-            a1, a2, a3, a4, a5, a6 = input("Enter angles (M1, M2, M3, M4, M5, "
-                                           "M6): ").split(", ")
+            angles = input("Enter angles (M1, M2, M3, M4, M5, M6)"
+                           ": ").split(", ")
 
-            angles = [a1, a2, a3, a4, a5, a6]
-            for angle in range(0, NUM_SERVOS):
-                digit = angles[angle].isdigit()
-                if (not digit):
-                    break
-
-                angles[angle] = int(angles[angle])
-
-            if (digit):
-
-
-            a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
-                                      int(a5), int(a6)]
-        self.kin.angles[0] = a1
-        self.kin.angles[1] = a2
-        self.kin.angles[2] = a3
-        self.kin.angles[3] = a4
-        self.kin.angles[4] = a5
-        self.kin.angles[5] = a6
+            i = 0 
+            while (i < self.NUM_SERVOS and angles[i].isdigit()):
+                angles[i] = int(angles[i])
+                i = i + 1
+            
+            # if all angles were digits and converted, break loop
+            if (i == self.NUM_SERVOS):
+                digit = True
+        
+        for i in range(0, self.NUM_SERVOS):
+            self.kin.angles[i] = angles[i]
     
     # Get user angles for kin.angles or use the current angles from braccio
     def input_current_or_new_angles(self):
@@ -209,12 +199,24 @@ class braccio_interface:
                 return self.EXIT_FLAG_RET
         
         if (change_angle == ALL_ANGLES):
-            a1, a2, a3, a4, a5, a6 = input("Enter angles (M1, M2, M3, M4, M5, "
-                                           "M6): ").split(', ')
-            a1, a2, a3, a4, a5, a6 = [int(a1), int(a2), int(a3), int(a4), 
-                                      int(a5), int(a6)]
-            msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, a1, a2, a3, a4, a5, 
-                                         a6)
+            digit = False
+            while (not digit):
+                angles = input("Enter angles (M1, M2, M3, M4, M5, M6)"
+                               ": ").split(', ')
+
+                i = 0 
+                while (i < self.NUM_SERVOS and angles[i].isdigit()):
+                    angles[i] = int(angles[i])
+                    i = i + 1
+                    
+                # if all angles were digits and converted, break loop
+                if (i == self.NUM_SERVOS):
+                    digit = True
+
+            msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, angles[0], 
+                                         angles[1], angles[2], angles[3],
+                                         angles[4], angles[5])
+
         elif (change_angle == REQUEST_ANGS):
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
@@ -309,7 +311,6 @@ class braccio_interface:
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
             self.read_exec()
-            return self.STAY_FLAG_RET
         elif (read == DISP_VECT_IN): # test the displacement vector function
             print("\nTesting displacement vectors")
             
@@ -323,16 +324,34 @@ class braccio_interface:
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
             self.read_exec()
-            return self.STAY_FLAG_RET
         elif (read == HOMO_TRANS_IN): # Homogeneous transform functionality
             print("\nTesting the Homogeneous Transform Matrix functionality.")
             self.input_current_or_new_angles()
             self.kin.set_kin_vars() # in case angles changed
             self.kin.print_homo_trans_mats()
-            return self.STAY_FLAG_RET
 
         return self.STAY_FLAG_RET
-
+   
+    # Interface to demonstrate a fuzzy controller, currently there is no
+    # sensor so user input is used instead.
     def fuzzy_controller_interface(self):
-        print("\nin fuzy controller interface\n")         
-        return self.EXIT_FLAG_RET
+        FUZZY_CONT_EX = 1 # Fuzzy controller example
+        EXIT_VAL = 2
+        
+        digit = False
+        while (not digit):
+            print("\n1.fuzzy logic example\n"
+                  "2. exit")
+            read = input("Enter number: ")
+            
+            digit = read.isdigit()
+            if (digit):
+                read = int(read)
+
+        if (read == EXIT_VAL):
+            return self.EXIT_FLAG_RET
+
+        if (read == FUZZY_CONT_EX):
+           return self.STAY_FLAG_RET
+
+        return self.STAY_FLAG_RET
