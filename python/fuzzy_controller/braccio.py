@@ -107,7 +107,7 @@ class braccio_interface:
             while (stay_flag):
                 stay_flag = self.fuzzy_controller_interface()
         else:
-            print("\ninvalid input")
+            print("Invalid input\n")
             
         return self.STAY_FLAG_RET;
    
@@ -123,21 +123,27 @@ class braccio_interface:
             i = 0 
             while (i < self.NUM_SERVOS and angles[i].isdigit()):
                 angles[i] = int(angles[i])
-                i = i + 1
+                i += 1
             
             # if all angles were digits and converted, break loop
             if (i == self.NUM_SERVOS):
                 digit = True
+            else:
+                print(f"Invalid input - {angles[i]}\n")
         
         for i in range(0, self.NUM_SERVOS):
             self.kin.angles[i] = angles[i]
     
     # Get user angles for kin.angles or use the current angles from braccio
     def input_current_or_new_angles(self):
+        CURRENT_ANGLES = 1
         USER_ANGLE_VAL = 2
-
+        MENU_IN_MIN = 1
+        MENU_IN_MAX = 2
+        
+        in_range = False
         digit = False
-        while (not digit):
+        while (not digit and not in_range): 
             print("\nUse current Braccio angles or use user input angles?")
             print("1. Current angles.\n"
                   "2. User input angles.")
@@ -146,8 +152,17 @@ class braccio_interface:
             digit = read.isdigit()
             if (digit):
                 read = int(read)
-                if (read == USER_ANGLE_VAL):
-                    self.get_user_angles()
+                if (read >= MENU_IN_MIN and read <= MENU_IN_MAX):
+                    in_range = True
+                else:
+                    print("Invalid input\n")
+            else:
+                print("Invalid input\n")
+
+        if (read == USER_ANGLE_VAL):
+            self.get_user_angles()
+        else: #(read == CURRENT_ANGLES):
+            print("Using Braccio's current angles")
     
     def print_cmd_menu(self):
         print("\nChoose angle to set or command to send\n"
@@ -195,7 +210,6 @@ class braccio_interface:
             return self.STAY_FLAG_RET
 
         if (change_angle == EXIT_PROGRAM):
-                print("\nexit program")
                 return self.EXIT_FLAG_RET
         
         if (change_angle == ALL_ANGLES):
@@ -212,6 +226,8 @@ class braccio_interface:
                 # if all angles were digits and converted, break loop
                 if (i == self.NUM_SERVOS):
                     digit = True
+                else:
+                    print(f"Invalid input - {angles[i]}\n")
 
             msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, angles[0], 
                                          angles[1], angles[2], angles[3],
@@ -231,6 +247,8 @@ class braccio_interface:
                 digit = angle.isdigit()
                 if (digit):
                     angle = int(angle)
+                else:
+                    print("Invalid input\n")
 
             if (change_angle == M1_BASE):
                 msg = self.cmd.build_cmd_msg(self.cmd.M1_ANGLE, angle)
@@ -266,41 +284,67 @@ class braccio_interface:
         DISP_VECT_IN  = 2 # Displacement Vectors input
         HOMO_TRANS_IN = 3 # Homogeneous Transform Matrix Funcionality input
         EXIT_VAL_IN   = 4
-
+        KIN_MENU_MIN  = 1
+        KIN_MENU_MAX  = 4
+        END_ROT_IN_MIN = 1
+        END_ROT_IN_MAX = 5
+        START_ROT_IN_MIN = 0
+        START_ROT_IN_MAX = 4
+        
+        in_range = False
         digit = False
-        while (not digit):
+        while (not digit and not in_range):
             self.kin_menu()
             read = input("Enter number: ")
             
             digit = read.isdigit() 
             if (digit):
                 read = int(read)
-
+                if (read >= KIN_MENU_MIN or read <= KIN_MENU_MAX):
+                    in_range = True
+                else:
+                    print("Invalid input\n")
+            else:
+                print("Invalid input\n")
         if (read == EXIT_VAL_IN):
             return self.EXIT_FLAG_RET
         
         if (read == ROT_MAT_IN): # rotation matrix functionality testing
-            print("Testing rotation matrix function.")
+            print("--- Testing rotation matrix function ---")
             
             self.input_current_or_new_angles()
-
+            
+            in_range = False
             digit = False
-            while (not digit):
+            while (not digit and not in_range):
                 print("\nEnter starting frame for rot matrix")
                 start_frame = input("Enter starting frame number (0-4): ")
 
                 digit = start_frame.isdigit()
                 if (digit):
                     start_frame = int(start_frame)
-
+                    if (start_frame >= START_ROT_IN_MIN and 
+                        start_frame <= START_ROT_IN_MAX):
+                        in_range = True
+                    else
+                        print("Invalid input\n")
+                else:
+                    print("Invalid input\n")
+            
+            in_range = False
             digit = False
-            while (not digit):
+            while (not digit and not in_range):
                 print("\nEnter ending frame for rot matrix")
-                end_frame = input("Enter ending frame number (0-5): ")
+                end_frame = input("Enter ending frame number (1-5): ")
 
                 digit = end_frame.isdigit()
                 if (digit):
                     end_frame = int(end_frame)
+                    if (end_frame >= END_ROT_IN_MIN and
+                        end_frame <= END_ROT_IN_MAX):
+                        in_range = True
+                    else
+                        print("Invalid input\n")
 
             rot_matrix = self.kin.create_rot_matrix(start_frame,end_frame)
             print("\n--rotation matrix {:d}_{:d}--".format(start_frame, 
@@ -336,22 +380,46 @@ class braccio_interface:
     # sensor so user input is used instead.
     def fuzzy_controller_interface(self):
         FUZZY_CONT_EX = 1 # Fuzzy controller example
-        EXIT_VAL = 2
+        PRINT_FUZZY_SETS = 2
+        MEMBERSHIP_CALC_TEST = 3
+        EXIT_VAL = 4
+        FC_MENU_MIN = 1
+        FC_MENU_MAX = 4
         
+        in_range = False
         digit = False
-        while (not digit):
-            print("\n1.fuzzy logic example\n"
-                  "2. exit")
+        while (not digit and not in_range):
+            print("\nThis section shows the example of a fuzzy logic\n"
+                  "controller and print/testing functionalities\n")
+                  
+            print("1. Fuzzy logic example\n"
+                  "2. Print Fuzzy Sets for Braccio\n"
+                  "3. Membership calculator testing\n"
+                  "4. exit")
             read = input("Enter number: ")
             
             digit = read.isdigit()
             if (digit):
                 read = int(read)
+                if (read >= FC_MENU_MIN and read <= FC_MENU_MAX):
+                    in_range = True
+                else:
+                    print("Invalid input\n")
+            else:
+                print("Invalid input\n")
 
         if (read == EXIT_VAL):
             return self.EXIT_FLAG_RET
 
         if (read == FUZZY_CONT_EX):
-           return self.STAY_FLAG_RET
+            self.fuzzy_con.controller_exec()
+            return self.STAY_FLAG_RET
+        elif (read == PRINT_FUZZY_SETS):
+            return self.STAY_FLAG_RET
+        elif (read == MEMBERSHIP_CALC_TEST):
+            self.fuzzy_con.membership_test()
+            return self.STAY_FLAG_RET
+        else:
+            print("Invalid input\n")
 
         return self.STAY_FLAG_RET

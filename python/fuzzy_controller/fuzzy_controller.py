@@ -10,7 +10,7 @@ class fuzzy_set:
 		ODD = 1
 		EVEN = 0
 
-		self.set_name = set_name
+		self.SET_NAME = set_name
 
 		self.NUM_ELEMENTS = len(set_element_names)
 		half_num_elements = self.NUM_ELEMENTS / 2
@@ -112,6 +112,9 @@ class fuzzy_set:
 			key=lambda i: set_element_names.index(i["name"])
 		)
 
+	def print_fuzzy_set(self):
+		return None
+
 class fuzzy_controller:
 	def __init__(self, arduino_serial, kin):
 		self.arduino_serial = arduino_serial
@@ -121,6 +124,9 @@ class fuzzy_controller:
 		# names of the fuzzy set and also used in fuzzy_set to sort its
 		# resulting list of dictionaries that stores the set element info
 		self.FUZZY_HAND_NAMES = ["at (AT)", "not at (NAT)"]
+		# hand name indicies
+		self.AT, self.NAT = [0, 1]
+
 		self.FUZZY_BASE_NAMES = [
 								 "far left (FL)",
 								 "left (L)",
@@ -130,6 +136,12 @@ class fuzzy_controller:
 								 "right (R)",
 								 "far right (FR)"
 							   ]
+		# base names indicies
+		(self.FL, self.L, self.CL, self.IF,
+		 self.CR, self.R, self.FR) = [
+								         0, 1, 2, 3, 4, 5, 6
+									 ]
+
 		self.FUZZY_ARM_NAMES = [
 							    "far behind hand (FBH)",
 								"close behind hand (CBH)",
@@ -139,6 +151,12 @@ class fuzzy_controller:
 								"close front hand (CFH)",
 								"far front hand (FFH)"
 							   ]
+		# arm names indicies
+		(self.FBH, self.CBH, self.VCBH, self.AH,
+		 self.VCFH, self.CFH, self.FFH) = [
+										      0, 1, 2, 3, 4, 5, 6
+										  ]
+
 		# name, xstart and xend for each defined set
 		self.ARM_NAME    = "arm"
 		self.ARM_XSTART  = 0
@@ -169,63 +187,290 @@ class fuzzy_controller:
 										self.HAND_XEND,
 										self.FUZZY_HAND_NAMES
     								   )
+		NUM_SETS_IN_MEMBERSHIP = 2
 
 	def get_hand_membership(self, x_in):
-		if (x_in <= self.HAND_XSTART):
-			return (
-						{
-							"name": self.fuzzy_hand_set.FUZZY_SET[0]["name"],
-							"membership": 1
-						},
-						{
-							"name": self.fuzzy_hand_set.FUZZY_SET[1]["name"],
-							"membership": 0
-						}
-				   )
-		elif (self.HAND_XSTART <= x_in and x_in <= self.HAND_XEND):
-			return (
-						{
-							"name": self.fuzzy_hand_set.FUZZY_SET[0]["name"],
-							"membership": 1 - x_in
-						},
-						{
-							"name": self.fuzzy_hand_set.FUZZY_SET[1]["name"],
-							"membership": x_in
-						}
-				   )
-		else: # (x_in >= self.HAND_XEND):
-			return (
-						{
-							"name": self.fuzzy_hand_set.FUZZY_SET[0]["name"],
-							"membership": 0
-						},
-						{
-							"name": self.fuzzy_hand_set.FUZZY_SET[1]["name"],
-							"membership": 1
-						}
-				   )
+		x = x_in
+		if (self.HAND_XSTART > x_in):
+			x = self.HAND_XSTART
+		if (self.HAND_XEND < x_in):
+			x = self.HAND_XEND
 
-	def get_arm_membership(self, x_in):
+		return (
+					{
+						"name": self.fuzzy_hand_set.FUZZY_SET[0]["name"],
+						"membership": 1 - x
+					},
+					{
+						"name": self.fuzzy_hand_set.FUZZY_SET[1]["name"],
+						"membership": x
+					}
+			   )
+
+	def get_membership(self, fuzzy_set, x_in):
+		# set a local x_in to the limits of the set so there are less cases to
+		# evaluate and can just use the "middle" equation of the set to get
+		# 1, 0, or inbetween as the membership function without altering the
+		# original x_in for the caller
+		x = x_in
+		if (fuzzy_set.SET_NAME == self.HAND_NAME):
+			return self.get_hand_membership(x_in)
+		elif (fuzzy_set.SET_NAME == self.ARM_NAME):
+			if (self.ARM_XSTART > x_in):
+				memberx_in = self.ARM_XSTART
+			elif (self.ARM_XEND < x_in):
+				x = self.ARM_XEND
+		elif (fuzzy_set.SET_NAME == self.BASE_NAME):
+			if (self.BASE_XSTART > x_in):
+				x = self.BASE_XSTART
+			elif (self.BASE_XEND < x_in):
+				x = self.BASE_XEND
+		else:
+			print("Error: Invalid fuzzy set sent to get_membership()")
+			return None
+
+
 		found = False
 		i = 0
 		while (not found):
-			i_xstart = self.fuzzy_arm_set.FUZZY_SET[i]["xstart"]
-			i_xend   = self.fuzzy_arm_set.FUZZY_SET[i]["xend"]
+			i_xstart = self.fuzzy_set.FUZZY_SET[i]["xstart"]
+			i_xend   = self.fuzzy_set.FUZZY_SET[i]["xend"]
 
 			# find what sets x_in belongs to
 
-			# i = 1 and i = self.NUM_ELEMENTS are special cases with how the
-			# fuzzy set it built
+			# i == 0 and i == NUM_ELEMENTS-1 are special cases with how the
+			# fuzzy set is built.
+
+			# when i == 0 and x_in is in the set element, the other set element
+			# in the membership for x is i == 1 (or the next element)
+			if (i == 0 and i_xstart <= x and i_xend >= x):
+				found = True
+				membership = (
+								{
+									"name": fuzzy_set.FUZZY_SET[i]["name"],
+									"membership": None,
+									"x_position": "special right"
+								},
+								{
+									"name": fuzzy_set.FUZZY_SET[i+1]["name"],
+									"membership": None,
+									"x_position": "left"
+								}
+							 )
+			# when i == NUM_ELEMENTS-1 and x_in is in the set element, the
+			# other set element in the membership for x is i == i-1
+			elif (
+				  i == fuzzy_set.NUM_ELEMENTS - 1 and
+				  i_xstart <= x_in and
+				  i_xend >= x_in
+			     ):
+				found = True
+				membership = (
+								{
+									"name": fuzzy_set.FUZZY_SET[i]["name"],
+									"membership": None,
+									"x_position": "special left"
+								},
+								{
+									"name": fuzzy_set.FUZZY_SET[i-1]["name"],
+									"membership": None,
+									"x_position": "right"
+								}
+							 )
+			elif (i_xstart <= x_in and i_xend >= x_in):
+				# find second set x_in belongs to
+				i_xmid = self.fuzzy_set.FUZZY_SET[i]["xmid"]
+				if (i_xstart <= x_in and i_xmid >= x_in): # prev set element
+					found = True
+					membership = (
+									{
+										"name": fuzzy_set.FUZZY_SET[i]["name"],
+										"membership": None,
+										"x_position": "left"
+									},
+									{
+										"name": fuzzy_set.FUZZY_SET[i-1]["name"],
+										"membership": None,
+										"x_position": "right"
+									}
+								)
+
+				else: # (i_xend >= x_in and i_xmid <= x_in) # next set element
+					found = True
+					membership = (
+									{
+										"name": fuzzy_set.FUZZY_SET[i]["name"],
+										"membership": None,
+										"x_position": "right"
+									},
+									{
+										"name": fuzzy_set.FUZZY_SET[i+1]["name"],
+										"membership": None,
+										"x_position": "left"
+									}
+								)
+			else:
+				print("Error: Could not find x_in in range of xstart/xend\n")
+				return None
+			i += 1
+		# end while
+
+		if (
+			(membership[0]["name"] in self.FUZZY_ARM_NAMES or
+			membership[0]["name"] in self.FUZZY_BASE_NAMES) and
+			(membership[1]["name"] in self.FUZZY_ARM_NAMES or
+			membership[1]["name"] in self.FUZZY_BASE_NAMES)
+		   ):
+			fill_arm_base_membership(membership, x)
+		else:
+			print("membership name not in fuzzy base or arm names. Invalid set\n"
+				  "name in membership.")
+
+		return membership
+
+	# set membership value in membership dict
+	#
+	# fuzzy_base and fuzzy_arm sets have the same membership functions
+	# in current setup
+	#
+	# - if the x_position is on the left, then the other set element for
+	#	x_in will always be the previous one
+	#
+	# - if the x_position of the first membership is on the right then the
+	#   other set element for x_in will always be the next one, which also
+	#   means for the second membership equation it will always be the left
+	#   half of the next set element
+	#
+	#   x should be set to the xstart or xend or inbetween based on the fuzzy
+	#   set. This function is called in get_membership() and if we call it
+	#   from anywhere else the same x_in checking should be done before
+	#   passing to this function.
+	#
+	#   TODO: Decide on checking x's range in this function as well, though
+	#		  with current call of this function in get_membership() its
+	#		  redundant
+	def fill_arm_base_membership(self, membership, x):
+		if (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.BH] or
+			membership[0]["name"] == self.FUZZY_BASE_NAMES[self.FL]):
+			# BH/FL
+			membership[0]["membership"] = (2 - x) / 2
+			# CBH/L left
+			membership[1]["membership"] =  x / 2
 
 
-			if (i_xstart <= x_in and i_xend >= x_in):
-					# find second set x_in belongs to
-					i_xmid = self.fuzzy_arm_set.FUZZY_SET[i]["xmid"]
-					if (i_xstart <= x_in and i_xmid >= x_in): # prev set element
-						return
-					else: # (i_xend >= x_in and i_xmid <= x_in) # next set element
-						return
+		if (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.CBH] or
+			membership[0]["name"] == self.FUZZY_BASE_NAMES[self.L]):
+				if (membership[0]["x_position"] == "left"):
+					# CBH/L left
+					membership[0]["membership"] = x / 2
+					# FL/BH (special right)
+					membership[1]["membership"] = (2 - x) / 2
+
+				else: # x_position == right
+					# CBH/L right
+					membership[0]["membership"] = (4 - x) / 2
+					# VCBH/CL left
+					membership[1]["membership"] = (x - 2) / 2
+
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.VCBH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.CL]):
+				if (membership[0]["x_position"] == "left"):
+					# VCBH/CL left
+					membership[1]["membership"] = (x - 2) / 2
+					# CBH/L right
+					membership[1]["membership"] = (4 - x) / 2
+
+				else: # x_position == right
+					# VCBH/CL right
+					membership[1]["membership"] = (6 - x) / 2
+					# AH/IF left
+					membership[1]["membership"] = (x - 4) / 2
+
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.AH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.IF]):
+				if (membership[0]["x_position"] == "left"):
+					# AH/IF left
+					membership[1]["membership"] = (x - 4) / 2
+					# VCBH/CL right
+					membership[1]["membership"] = (6 - x) / 2
+
+				else: # x_position == right
+					# AH/IF right
+					membership[1]["membership"] = (8 - x) / 2
+					# VCFH/CR left
+					membership[1]["membership"] = (x - 6) / 2
+
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.VCFH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.CR]):
+				if (membership[0]["x_position"] == "left"):
+					# VCFH/CR left
+					membership[1]["membership"] = (x - 6) / 2
+					# AH/IF right
+					membership[1]["membership"] = (8 - x) / 2
+
+				else: # x_position == right
+					# VCFH/CR right
+					membership[1]["membership"] = (10 - x) / 2
+					# CFH/R left
+					membership[1]["membership"] = (x - 8) / 2
+
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.CFH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.R]):
+				if (membership[0]["x_position"] == "left"):
+					# CFH/R left
+					membership[1]["membership"] = (x - 8) / 2
+					# VCFH/CR right
+					membership[1]["membership"] = (10 - x) / 2
+
+				else: # x_position == right
+					# CFH/R right
+					membership[1]["membership"] = (12 - x) / 2
+					# FFH/FR (special left)
+					membership[1]["membership"] = (x - 10) / 2
+
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.FFH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.FR]):
+			# FFH/FR
+			membership[0]["membership"] = (x - 10)
+			# CFH/R right
+			membership[1]["membership"] = (12 - x) / 2
+
+		else:
+			print("membership val not filled, invalid name in passed member\n")
+
+		return membership
+
+	def print_membership(self, membership):
+		print("\n-- membership values --")
+		i = 0
+		for member in membership:
+			print("-- set {i} --")
+			for key, value in member.items():
+				print(f"{key}: {value}")
+			print();
+			i += 1
+
+	def membership_test(self):
+		print("\n--- Testing membership functionality ---")
+		print("This section is to test the membership calculation\n"
+			  "functionality for the fuzzy sets. Enter an x value to be\n"
+			  "evaluated for membership in a given fuzzy set.\n")
+		stay_flag = True
+		while (stay_flag):
+			digit = False
+			while (not digit):
+				print("1. Hand set - eval for the end effector fuzzy set\n"
+					  "2. Arm set  - eval for the whole arm fuzzy set\n"
+					  "3. Base set - eval for the rotating base fuzzy set")
+					  "4. exit")
+				input("Enter number: ")
+
+			input("Enter x input value (as if from sensor): ")
 
 
-
-
+	def controller_exec(self):
+		stay_flag = True
+		while (stay_flag):
+			hand_membership = self.get_membership(self.fuzzy_hand_set, 1)
+			self.print_membership(hand_membership)
+			stay_flag = False
