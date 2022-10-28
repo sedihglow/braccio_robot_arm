@@ -523,20 +523,7 @@ class fuzzy_controller:
 			if (menu_input == EXIT_VAL):
 				stay_flag = False
 			else: # continue with execution
-				afloat = False
-				while (not afloat):
-					print("\nNOTE: Hand set range: 0-1\n"
-							"      Arm  set range: 0-12\n"
-							"      Base set range: 0-12\n"
-							"      x can be out of this range\n")
-					read = input("Enter x input value (as if from sensor): ")
-
-					try:
-						xval = float(read)
-						afloat = True
-					except ValueError:
-						print("Invalid input")
-						input("-- Press Enter to Continue --")
+				xval = get_user_crisp_input()
 
 				# get membership and print results
 				if (menu_input == HAND_MENU_IN):
@@ -655,6 +642,25 @@ class fuzzy_controller:
 				stay_flag = False
 			else:
 				input("-- Press Enter to Continue --")
+
+	# gets a crisp input from the user instead of a sensor.
+	def get_user_crisp_input(self):
+		afloat = False
+		while (not afloat):
+			print("\nNOTE: Hand set range: 0-1\n"
+					"      Arm  set range: 0-12\n"
+					"      Base set range: 0-12\n"
+					"      x can be out of this range\n")
+			read = input("Enter x input value (as if from sensor): ")
+
+			try:
+				xval = float(read)
+				afloat = True
+			except ValueError:
+				print("Invalid input")
+				input("-- Press Enter to Continue --")
+
+		return xval
 
 	def fuzzy_controller_exec(self):
 		return None
