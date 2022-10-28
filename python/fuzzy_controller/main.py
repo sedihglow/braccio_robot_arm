@@ -23,8 +23,8 @@ if __name__ == "__main__":
         while (stay_flag):
             stay_flag = braccio.interface_director()
     except KeyboardInterrupt:
-        print("exiting...")
+        print("\nexiting...")
     finally:
-        print("exiting...")
+        print("\nexiting...")
         
 

@@ -162,7 +162,7 @@ class fuzzy_controller:
 		# num_elements = 7, then
 		# (12-6) / (7-1) = 2 where 2 is the half point of the triangle
 		# membership function
-		num_elements = len(FUZZY_ARM_NAMES)
+		num_elements = len(self.FUZZY_ARM_NAMES)
 		next_half_point = (
 			(self.ARM_XEND - self.ARM_XSTART) / (num_elements - 1)
 		)
@@ -180,12 +180,12 @@ class fuzzy_controller:
 										self.ARM_XSTART,
 										self.ARM_XEND,
 										self.FUZZY_ARM_NAMES,
-										self.next_half_point,
-										self.next_point
+										next_half_point,
+										next_point
 									   )
 
 		# setup rotating base fuzzy set
-		num_elements = len(FUZZY_BASE_NAMES)
+		num_elements = len(self.FUZZY_BASE_NAMES)
 		next_half_point = (
 			(self.BASE_XEND - self.BASE_XSTART) / (num_elements - 1)
 		)
@@ -195,12 +195,12 @@ class fuzzy_controller:
 										self.BASE_XSTART,
 										self.BASE_XEND,
 										self.FUZZY_BASE_NAMES,
-										self.next_half_point,
-										self.next_point
+										next_half_point,
+										next_point
 									   )
 
 		# setup end effector fuzzy set
-		num_elements = len(FUZZY_HAND_NAMES)
+		num_elements = len(self.FUZZY_HAND_NAMES)
 		next_half_point = (
 			(self.HAND_XEND - self.HAND_XSTART) / (num_elements - 1)
 		)
@@ -210,8 +210,8 @@ class fuzzy_controller:
 										self.HAND_XSTART,
 										self.HAND_XEND,
 										self.FUZZY_HAND_NAMES,
-										self.next_half_point,
-										self.next_point
+										next_half_point,
+										next_point
     								   )
 
 	def get_hand_membership(self, x_in):
@@ -258,8 +258,8 @@ class fuzzy_controller:
 		found = False
 		i = 0
 		while (not found):
-			i_xstart = self.fuzzy_set.FUZZY_SET[i]["xstart"]
-			i_xend   = self.fuzzy_set.FUZZY_SET[i]["xend"]
+			i_xstart = fuzzy_set.FUZZY_SET[i]["xstart"]
+			i_xend   = fuzzy_set.FUZZY_SET[i]["xend"]
 
 			# find what sets x_in belongs to
 
@@ -284,11 +284,10 @@ class fuzzy_controller:
 							 )
 			# when i == NUM_ELEMENTS-1 and x_in is in the set element, the
 			# other set element in the membership for x is i == i-1
-			elif (
-				  i == fuzzy_set.NUM_ELEMENTS - 1 and
+			elif (i == fuzzy_set.NUM_ELEMENTS - 1 and
 				  i_xstart <= x_in and
 				  i_xend >= x_in
-			     ):
+			):
 				found = True
 				membership = (
 								{
@@ -340,13 +339,12 @@ class fuzzy_controller:
 			i += 1
 		# end while
 
-		if (
-			(membership[0]["name"] in self.FUZZY_ARM_NAMES or
+		if ((membership[0]["name"] in self.FUZZY_ARM_NAMES or
 			membership[0]["name"] in self.FUZZY_BASE_NAMES) and
 			(membership[1]["name"] in self.FUZZY_ARM_NAMES or
 			membership[1]["name"] in self.FUZZY_BASE_NAMES)
-		   ):
-			fill_arm_base_membership(membership, x)
+		):
+			self.fill_arm_base_membership(membership, x)
 		else:
 			print("membership name not in fuzzy base or arm names. Invalid set\n"
 				  "name in membership.")
@@ -469,7 +467,7 @@ class fuzzy_controller:
 		print("\n-- membership values --")
 		i = 0
 		for member in membership:
-			print("-- set {i} --")
+			print(f"-- set {i} --")
 			for key, value in member.items():
 				print(f"{key}: {value}")
 			print();
@@ -488,7 +486,7 @@ class fuzzy_controller:
 		while (stay_flag):
 			in_range = False
 			digit = False
-			while (not digit and not in_range):
+			while (not digit or not in_range):
 				print("\n--- Testing membership functionality ---\n"
 					  "This section is to test the membership calculation\n"
 					  "functionality for the fuzzy sets. Enter an x value to\n"
@@ -514,7 +512,7 @@ class fuzzy_controller:
 		    # end while
 
 			if (menu_input == EXIT_VAL):
-				stay_flag == False
+				stay_flag = False
 			else: # continue with execution
 				afloat = False
 				while (not afloat):
@@ -552,6 +550,8 @@ class fuzzy_controller:
 					self.print_membership(hand_membership)
 					self.print_membership(arm_membership)
 					self.print_membership(base_membership)
+
+				input("-- Press Enter to Continue --")
 		# end while
 
 	def controller_exec(self):

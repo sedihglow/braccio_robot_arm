@@ -63,18 +63,22 @@ class braccio_interface:
     # Directs the user to various interfaces and options for the braccio robot
     # arm. 
     def interface_director(self):
-        EXIT_VAL = 4
         CMD_INTER_VAL  = 1 # cmd interface val
         KIN_INTER_VAL  = 2 # kinematics interface val
         FUZZY_CONT_VAL = 3 # fuzzy controller val
+        EXIT_VAL = 4
+        MENU_MIN_IN = 1
+        MENU_MAX_IN = 4
+        
 
         print("\nThis program will allow you to tinker with all the servos\n"
               "via the command interface with the Arduino controller.\n"
               "It will also showcase an implementation of kinimatics\n"
               "for this Braccio robot arm")
-
+        
+        in_range = False
         digit = False
-        while (not digit):
+        while (not digit or not in_range):
             # print menu for cmd or inverse kin
             print("\nWhich functionality would you like to run?") 
             print("1. Command Interface (Tinker with servos and commands)\n"
@@ -86,6 +90,12 @@ class braccio_interface:
             digit = read.isdigit()
             if (digit):
                 read = int(read)
+                if (read >= MENU_MIN_IN and read <= MENU_MAX_IN):
+                    in_range = True
+                else:
+                    print("Invalid input\n")
+            else:
+                print("Invalid input\n")
 
         if (read == EXIT_VAL):
             return self.EXIT_FLAG_RET;
@@ -115,11 +125,17 @@ class braccio_interface:
     def get_user_angles(self):
         digit = False
         while (not digit):
-            print("\nEnter 6 angles for braccio separated with commas," 
-                  "servo 0-5 (M1-M6)")
-            angles = input("Enter angles (M1, M2, M3, M4, M5, M6)"
-                           ": ").split(", ")
-
+            angle_range = False
+            while (not angle_range):
+                print("\nEnter 6 angles for braccio separated with commas," 
+                      "servo 0-5 (M1-M6)")
+                angles = input("Enter angles (M1, M2, M3, M4, M5, M6)"
+                               ": ").split(", ")
+                if (len(angles) == self.NUM_SERVOS):
+                    angle_range = True
+                else:
+                    print("Invalid input\n")
+            
             i = 0 
             while (i < self.NUM_SERVOS and angles[i].isdigit()):
                 angles[i] = int(angles[i])
@@ -143,7 +159,7 @@ class braccio_interface:
         
         in_range = False
         digit = False
-        while (not digit and not in_range): 
+        while (not digit or not in_range): 
             print("\nUse current Braccio angles or use user input angles?")
             print("1. Current angles.\n"
                   "2. User input angles.")
@@ -183,8 +199,6 @@ class braccio_interface:
     # being recorded on host and controller are consistant.
     def cmd_menu_input_send(self):
         # Menu option values based on print_cmd_menu() options
-        MIN_OPTS     = 1
-        MAX_OPTS     = 10
         M1_BASE      = 1
         M2_SHOULDER  = 2
         M3_ELBOW     = 3
@@ -195,24 +209,29 @@ class braccio_interface:
         REQUEST_ANGS = 8
         SET_DFLT_POS  = 9
         EXIT_PROGRAM = 10
-
+        MENU_MIN_OPTS = 1
+        MENU_MAX_OPTS = 10
+        
+        in_range = False
         digit = False
-        while (not digit):
+        while (not digit or not in_range):
             self.print_cmd_menu()
-            change_angle = input("Enter number: ")
+            cmd_in = input("Enter number: ")
 
-            digit = change_angle.isdigit()
+            digit = cmd_in.isdigit()
             if (digit):
-                change_angle = int(change_angle)
+                cmd_in = int(cmd_in)
+                if (cmd_in >= MENU_MIN_OPTS and cmd_in <= MENU_MAX_OPTS):
+                    in_range = True
+                else:
+                    print("Invalid input\n")
+            else:
+                print("Invalid input\n")
 
-        if (change_angle > MAX_OPTS or change_angle < MIN_OPTS):
-            print("\nInvalid Input")
-            return self.STAY_FLAG_RET
-
-        if (change_angle == EXIT_PROGRAM):
+        if (cmd_in == EXIT_PROGRAM):
                 return self.EXIT_FLAG_RET
         
-        if (change_angle == ALL_ANGLES):
+        if (cmd_in == ALL_ANGLES):
             digit = False
             while (not digit):
                 angles = input("Enter angles (M1, M2, M3, M4, M5, M6)"
@@ -233,11 +252,11 @@ class braccio_interface:
                                          angles[1], angles[2], angles[3],
                                          angles[4], angles[5])
 
-        elif (change_angle == REQUEST_ANGS):
+        elif (cmd_in == REQUEST_ANGS):
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
             return self.STAY_FLAG_RET
-        elif (change_angle == SET_DFLT_POS):
+        elif (cmd_in == SET_DFLT_POS):
             msg = self.cmd.build_cmd_msg(self.cmd.SET_DFLT_POS)
         else:
             digit = False
@@ -250,17 +269,17 @@ class braccio_interface:
                 else:
                     print("Invalid input\n")
 
-            if (change_angle == M1_BASE):
+            if (cmd_in == M1_BASE):
                 msg = self.cmd.build_cmd_msg(self.cmd.M1_ANGLE, angle)
-            elif (change_angle == M2_SHOULDER):
+            elif (cmd_in == M2_SHOULDER):
                 msg = self.cmd.build_cmd_msg(self.cmd.M2_ANGLE, angle)
-            elif (change_angle == M3_ELBOW):
+            elif (cmd_in == M3_ELBOW):
                 msg = self.cmd.build_cmd_msg(self.cmd.M3_ANGLE, angle)
-            elif (change_angle == M4_WRIST_V):
+            elif (cmd_in == M4_WRIST_V):
                 msg = self.cmd.build_cmd_msg(self.cmd.M4_ANGLE, angle)
-            elif (change_angle == M5_WRIST_R):
+            elif (cmd_in == M5_WRIST_R):
                 msg = self.cmd.build_cmd_msg(self.cmd.M5_ANGLE, angle)
-            elif (change_angle == M6_GRIPPER):
+            elif (cmd_in == M6_GRIPPER):
                 msg = self.cmd.build_cmd_msg(self.cmd.M6_ANGLE, angle)
 
         self.arduino_serial.write(msg)
@@ -271,7 +290,7 @@ class braccio_interface:
         return self.STAY_FLAG_RET
 
     def kin_menu(self):
-        print("\nKinematics functionalities")
+        print("\n--- Kinematics functionalities ---")
         print("1. Rotation Matrix function\n"
               "2. Displacement Vectors\n"
               "3. Homogeneous Transform Matrix.\n"
@@ -293,14 +312,14 @@ class braccio_interface:
         
         in_range = False
         digit = False
-        while (not digit and not in_range):
+        while (not digit or not in_range):
             self.kin_menu()
             read = input("Enter number: ")
             
             digit = read.isdigit() 
             if (digit):
                 read = int(read)
-                if (read >= KIN_MENU_MIN or read <= KIN_MENU_MAX):
+                if (read >= KIN_MENU_MIN and read <= KIN_MENU_MAX):
                     in_range = True
                 else:
                     print("Invalid input\n")
@@ -316,7 +335,7 @@ class braccio_interface:
             
             in_range = False
             digit = False
-            while (not digit and not in_range):
+            while (not digit or not in_range):
                 print("\nEnter starting frame for rot matrix")
                 start_frame = input("Enter starting frame number (0-4): ")
 
@@ -326,14 +345,14 @@ class braccio_interface:
                     if (start_frame >= START_ROT_IN_MIN and 
                         start_frame <= START_ROT_IN_MAX):
                         in_range = True
-                    else
+                    else:
                         print("Invalid input\n")
                 else:
                     print("Invalid input\n")
             
             in_range = False
             digit = False
-            while (not digit and not in_range):
+            while (not digit or not in_range):
                 print("\nEnter ending frame for rot matrix")
                 end_frame = input("Enter ending frame number (1-5): ")
 
@@ -343,8 +362,10 @@ class braccio_interface:
                     if (end_frame >= END_ROT_IN_MIN and
                         end_frame <= END_ROT_IN_MAX):
                         in_range = True
-                    else
+                    else:
                         print("Invalid input\n")
+                else:
+                    print("Invalid input\n")
 
             rot_matrix = self.kin.create_rot_matrix(start_frame,end_frame)
             print("\n--rotation matrix {:d}_{:d}--".format(start_frame, 
@@ -388,7 +409,7 @@ class braccio_interface:
         
         in_range = False
         digit = False
-        while (not digit and not in_range):
+        while (not digit or not in_range):
             print("\nThis section shows the example of a fuzzy logic\n"
                   "controller and print/testing functionalities\n")
                   
@@ -407,11 +428,10 @@ class braccio_interface:
                     print("Invalid input\n")
             else:
                 print("Invalid input\n")
-
+         
         if (read == EXIT_VAL):
             return self.EXIT_FLAG_RET
-
-        if (read == FUZZY_CONT_EX):
+        elif (read == FUZZY_CONT_EX):
             self.fuzzy_con.controller_exec()
         elif (read == PRINT_FUZZY_SETS):
             return self.STAY_FLAG_RET
@@ -419,5 +439,6 @@ class braccio_interface:
             self.fuzzy_con.membership_test()
         else:
             print("Invalid input\n")
+            print("SECOND INVALID INPUT\n")
 
         return self.STAY_FLAG_RET
