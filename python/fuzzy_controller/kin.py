@@ -248,5 +248,3 @@ class kinematics:
             return self.rot_mat[4] # rot_mat_4_5
 
         return self.rot_mat[5] # default return rot_mat_0_5
-
-

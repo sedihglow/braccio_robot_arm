@@ -336,7 +336,7 @@ int braccio_arm::exec_command(parsed_msg_s *in_msg)
     break;
     case REQUEST_MX_ANGLE:
         send_all_angles();
-        send_verbose("Sent all angles, "
+        send_verbose("Current angles from controller, "
                      "M1: %d, M2: %d, M3: %d, M4: %d, M5: %d, M6: %d\n",
                      angles.m1, angles.m2, angles.m3, angles.m4, angles.m5,
                      angles.m6);

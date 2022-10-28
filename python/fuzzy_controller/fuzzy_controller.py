@@ -643,9 +643,11 @@ class fuzzy_controller:
 				term.clear()
 				self.fuzzy_hand_set.print_fuzzy_set()
 				input("-- Press Enter for Next Set --")
+
 				term.clear()
 				self.fuzzy_arm_set.print_fuzzy_set()
 				input("-- Press Enter for Next Set --")
+
 				term.clear()
 				self.fuzzy_base_set.print_fuzzy_set()
 
