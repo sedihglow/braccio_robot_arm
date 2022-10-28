@@ -242,7 +242,7 @@ class fuzzy_controller:
 			return self.get_hand_membership(x_in)
 		elif (fuzzy_set.SET_NAME == self.ARM_NAME):
 			if (self.ARM_XSTART > x_in):
-				memberx_in = self.ARM_XSTART
+				x = self.ARM_XSTART
 			elif (self.ARM_XEND < x_in):
 				x = self.ARM_XEND
 		elif (fuzzy_set.SET_NAME == self.BASE_NAME):
@@ -257,7 +257,7 @@ class fuzzy_controller:
 
 		found = False
 		i = 0
-		while (not found):
+		while (not found and  i < fuzzy_set.NUM_ELEMENTS):
 			i_xstart = fuzzy_set.FUZZY_SET[i]["xstart"]
 			i_xend   = fuzzy_set.FUZZY_SET[i]["xend"]
 
@@ -285,8 +285,8 @@ class fuzzy_controller:
 			# when i == NUM_ELEMENTS-1 and x_in is in the set element, the
 			# other set element in the membership for x is i == i-1
 			elif (i == fuzzy_set.NUM_ELEMENTS - 1 and
-				  i_xstart <= x_in and
-				  i_xend >= x_in
+				  i_xstart <= x and
+				  i_xend >= x
 			):
 				found = True
 				membership = (
@@ -301,10 +301,10 @@ class fuzzy_controller:
 									"x_position": "right"
 								}
 							 )
-			elif (i_xstart <= x_in and i_xend >= x_in):
+			elif (i_xstart <= x and i_xend >= x):
 				# find second set x_in belongs to
-				i_xmid = self.fuzzy_set.FUZZY_SET[i]["xmid"]
-				if (i_xstart <= x_in and i_xmid >= x_in): # prev set element
+				i_xmid = fuzzy_set.FUZZY_SET[i]["xmid"]
+				if (i_xstart <= x and i_xmid >= x): # prev set element
 					found = True
 					membership = (
 									{
@@ -319,7 +319,7 @@ class fuzzy_controller:
 									}
 								)
 
-				else: # (i_xend >= x_in and i_xmid <= x_in) # next set element
+				else: # (i_xend >= x and i_xmid <= x) # next set element
 					found = True
 					membership = (
 									{
@@ -333,11 +333,13 @@ class fuzzy_controller:
 										"x_position": "left"
 									}
 								)
-			else:
-				print("Error: Could not find x_in in range of xstart/xend\n")
-				return None
 			i += 1
 		# end while
+
+		if (not found):
+			print("Error: Could not find x_in in range of xstart/xend\n")
+			return None
+
 
 		if ((membership[0]["name"] in self.FUZZY_ARM_NAMES or
 			membership[0]["name"] in self.FUZZY_BASE_NAMES) and
@@ -373,83 +375,81 @@ class fuzzy_controller:
 	#		  with current call of this function in get_membership() its
 	#		  redundant
 	def fill_arm_base_membership(self, membership, x):
-		if (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.BH] or
+		if (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.FBH] or
 			membership[0]["name"] == self.FUZZY_BASE_NAMES[self.FL]):
-			# BH/FL
+			# FBH/FL
 			membership[0]["membership"] = (2 - x) / 2
 			# CBH/L left
 			membership[1]["membership"] =  x / 2
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.CBH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.L]):
+			if (membership[0]["x_position"] == "left"):
+				# CBH/L left
+				membership[0]["membership"] = x / 2
+				# FL/FBH (special right)
+				membership[1]["membership"] = (2 - x) / 2
 
-
-		if (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.CBH] or
-			membership[0]["name"] == self.FUZZY_BASE_NAMES[self.L]):
-				if (membership[0]["x_position"] == "left"):
-					# CBH/L left
-					membership[0]["membership"] = x / 2
-					# FL/BH (special right)
-					membership[1]["membership"] = (2 - x) / 2
-
-				else: # x_position == right
-					# CBH/L right
-					membership[0]["membership"] = (4 - x) / 2
-					# VCBH/CL left
-					membership[1]["membership"] = (x - 2) / 2
+			else: # x_position == right
+				# CBH/L right
+				membership[0]["membership"] = (4 - x) / 2
+				# VCBH/CL left
+				membership[1]["membership"] = (x - 2) / 2
 
 		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.VCBH] or
-			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.CL]):
-				if (membership[0]["x_position"] == "left"):
-					# VCBH/CL left
-					membership[1]["membership"] = (x - 2) / 2
-					# CBH/L right
-					membership[1]["membership"] = (4 - x) / 2
+		      membership[0]["name"] == self.FUZZY_BASE_NAMES[self.CL]):
+			if (membership[0]["x_position"] == "left"):
+				# VCBH/CL left
+				membership[0]["membership"] = (x - 2) / 2
+				# CBH/L right
+				membership[1]["membership"] = (4 - x) / 2
 
-				else: # x_position == right
-					# VCBH/CL right
-					membership[1]["membership"] = (6 - x) / 2
-					# AH/IF left
-					membership[1]["membership"] = (x - 4) / 2
+			else: # x_position == right
+				# VCBH/CL right
+				membership[0]["membership"] = (6 - x) / 2
+				# AH/IF left
+				membership[1]["membership"] = (x - 4) / 2
 
 		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.AH] or
 			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.IF]):
-				if (membership[0]["x_position"] == "left"):
-					# AH/IF left
-					membership[1]["membership"] = (x - 4) / 2
-					# VCBH/CL right
-					membership[1]["membership"] = (6 - x) / 2
+			if (membership[0]["x_position"] == "left"):
+				# AH/IF left
+				membership[0]["membership"] = (x - 4) / 2
+				# VCBH/CL right
+				membership[1]["membership"] = (6 - x) / 2
 
-				else: # x_position == right
-					# AH/IF right
-					membership[1]["membership"] = (8 - x) / 2
-					# VCFH/CR left
-					membership[1]["membership"] = (x - 6) / 2
+			else: # x_position == right
+				# AH/IF right
+				membership[0]["membership"] = (8 - x) / 2
+				# VCFH/CR left
+				membership[1]["membership"] = (x - 6) / 2
 
 		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.VCFH] or
 			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.CR]):
-				if (membership[0]["x_position"] == "left"):
-					# VCFH/CR left
-					membership[1]["membership"] = (x - 6) / 2
-					# AH/IF right
-					membership[1]["membership"] = (8 - x) / 2
+			if (membership[0]["x_position"] == "left"):
+				# VCFH/CR left
+				membership[0]["membership"] = (x - 6) / 2
+				# AH/IF right
+				membership[1]["membership"] = (8 - x) / 2
 
-				else: # x_position == right
-					# VCFH/CR right
-					membership[1]["membership"] = (10 - x) / 2
-					# CFH/R left
-					membership[1]["membership"] = (x - 8) / 2
+			else: # x_position == right
+				# VCFH/CR right
+				membership[0]["membership"] = (10 - x) / 2
+				# CFH/R left
+				membership[1]["membership"] = (x - 8) / 2
 
 		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.CFH] or
 			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.R]):
-				if (membership[0]["x_position"] == "left"):
-					# CFH/R left
-					membership[1]["membership"] = (x - 8) / 2
-					# VCFH/CR right
-					membership[1]["membership"] = (10 - x) / 2
+			if (membership[0]["x_position"] == "left"):
+				# CFH/R left
+				membership[1]["membership"] = (x - 8) / 2
+				# VCFH/CR right
+				membership[1]["membership"] = (10 - x) / 2
 
-				else: # x_position == right
-					# CFH/R right
-					membership[1]["membership"] = (12 - x) / 2
-					# FFH/FR (special left)
-					membership[1]["membership"] = (x - 10) / 2
+			else: # x_position == right
+				# CFH/R right
+				membership[1]["membership"] = (12 - x) / 2
+				# FFH/FR (special left)
+				membership[1]["membership"] = (x - 10) / 2
 
 		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.FFH] or
 			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.FR]):
@@ -528,18 +528,25 @@ class fuzzy_controller:
 					except ValueError:
 						print("Invalid input")
 
+				# get membership and print results
 				if (menu_input == HAND_MENU_IN):
 					hand_membership = self.get_membership(self.fuzzy_hand_set,
 														  xval)
-					self.print_membership(hand_membership)
+					if (hand_membership):
+						print("-- fuzzy hand set membership --\n")
+						self.print_membership(hand_membership)
 				elif (menu_input == ARM_MENU_IN):
 					arm_membership = self.get_membership(self.fuzzy_arm_set,
 														 xval)
-					self.print_membership(arm_membership)
+					if (arm_membership):
+						print("-- fuzzy arm set membership --\n")
+						self.print_membership(arm_membership)
 				elif (menu_input == BASE_MENU_IN):
 					base_membership = self.get_membership(self.fuzzy_base_set,
 														  xval)
-					self.print_membership(base_membership)
+					if (base_membership):
+						print("-- fuzzy base set membership --\n")
+						self.print_membership(base_membership)
 				else: # menu_input == ALL_MENU_IN
 					hand_membership = self.get_membership(self.fuzzy_hand_set,
 														  xval)
@@ -547,9 +554,25 @@ class fuzzy_controller:
 														  xval)
 					base_membership = self.get_membership(self.fuzzy_base_set,
 														  xval)
-					self.print_membership(hand_membership)
-					self.print_membership(arm_membership)
-					self.print_membership(base_membership)
+
+					# if successfully got membership, print result
+					if (hand_membership):
+						print("-- fuzzy hand set membership --\n")
+						self.print_membership(hand_membership)
+					else:
+						print("Error getting hand membership\n")
+
+					if (arm_membership):
+						print("-- fuzzy arm set membership --\n")
+						self.print_membership(arm_membership)
+					else:
+						print("Error getting arm membership\n")
+
+					if (base_membership):
+						print("-- fuzzy base set membership --\n")
+						self.print_membership(base_membership)
+					else:
+						print("Error getting base membership\n")
 
 				input("-- Press Enter to Continue --")
 		# end while
