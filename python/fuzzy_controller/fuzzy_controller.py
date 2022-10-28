@@ -3,7 +3,8 @@ from kin import kinematics
 import math
 
 class fuzzy_set:
-	def __init__(self, set_name, set_xstart, set_xend, set_element_names):
+	def __init__(self, set_name, set_xstart, set_xend, set_element_names,
+				 next_half_point, next_point):
 		self.FUZZY_SET = []
 
 		# odd even result of (val % 2)
@@ -14,17 +15,6 @@ class fuzzy_set:
 
 		self.NUM_ELEMENTS = len(set_element_names)
 		half_num_elements = self.NUM_ELEMENTS / 2
-
-		# next_half_point example, if set_xend = 12, set_xstart = 6, and
-		# num_elements = 7, then
-		# (12-6) / (7-1) = 2
-		next_half_point = (set_xend - set_xstart) / (self.NUM_ELEMENTS - 1)
-
-		# next point is the end of the set elements function when it goes
-		# from 0 -> 1 -> 0
-		# so keeping with previous comment about next_half_point, we see the
-		# next point is 4.
-		next_point = next_half_point * 2
 
 		# get first half of membership function points, every other starting
 		# at index 0
@@ -168,26 +158,61 @@ class fuzzy_controller:
 		self.HAND_XSTART = 0
 		self.HAND_XEND   = 1
 
-		# define fuzzy sets for braccio
+		# next_half_point example, if set_xend = 12, set_xstart = 6, and
+		# num_elements = 7, then
+		# (12-6) / (7-1) = 2 where 2 is the half point of the triangle
+		# membership function
+		num_elements = len(FUZZY_ARM_NAMES)
+		next_half_point = (
+			(self.ARM_XEND - self.ARM_XSTART) / (num_elements - 1)
+		)
+
+		# next point is the end of the set elements function when it goes
+		# from 0 -> 1 -> 0
+		# so keeping with previous comment about next_half_point, we see the
+		# next point is 4.
+		next_point = next_half_point * 2
+
+		# --- define fuzzy sets for braccio ---
+		# setup whole arm (not hand and base) fuzzy set
 		self.fuzzy_arm_set  = fuzzy_set(
 										self.ARM_NAME,
 										self.ARM_XSTART,
 										self.ARM_XEND,
-										self.FUZZY_ARM_NAMES
+										self.FUZZY_ARM_NAMES,
+										self.next_half_point,
+										self.next_point
 									   )
+
+		# setup rotating base fuzzy set
+		num_elements = len(FUZZY_BASE_NAMES)
+		next_half_point = (
+			(self.BASE_XEND - self.BASE_XSTART) / (num_elements - 1)
+		)
+		next_point = next_half_point * 2
 		self.fuzzy_base_set = fuzzy_set(
 										self.BASE_NAME,
 										self.BASE_XSTART,
 										self.BASE_XEND,
-										self.FUZZY_BASE_NAMES
+										self.FUZZY_BASE_NAMES,
+										self.next_half_point,
+										self.next_point
 									   )
+
+		# setup end effector fuzzy set
+		num_elements = len(FUZZY_HAND_NAMES)
+		next_half_point = (
+			(self.HAND_XEND - self.HAND_XSTART) / (num_elements - 1)
+		)
+		next_point = next_half_point * 2
 		self.fuzzy_hand_set = fuzzy_set(
 										self.HAND_NAME,
 										self.HAND_XSTART,
 										self.HAND_XEND,
-										self.FUZZY_HAND_NAMES
+										self.FUZZY_HAND_NAMES,
+										self.next_half_point,
+										self.next_point
     								   )
-		NUM_SETS_IN_MEMBERSHIP = 2
 
 	def get_hand_membership(self, x_in):
 		x = x_in
@@ -451,26 +476,83 @@ class fuzzy_controller:
 			i += 1
 
 	def membership_test(self):
-		print("\n--- Testing membership functionality ---")
-		print("This section is to test the membership calculation\n"
-			  "functionality for the fuzzy sets. Enter an x value to be\n"
-			  "evaluated for membership in a given fuzzy set.\n")
+		HAND_MENU_IN = 1
+		ARM_MENU_IN  = 2
+		BASE_MENU_IN = 3
+		ALL_MENU_IN  = 4
+		EXIT_VAL     = 5
+		MEMBER_MENU_MIN = 1
+		MEMBER_MENU_MAX = 5
+
 		stay_flag = True
 		while (stay_flag):
+			in_range = False
 			digit = False
-			while (not digit):
+			while (not digit and not in_range):
+				print("\n--- Testing membership functionality ---\n"
+					  "This section is to test the membership calculation\n"
+					  "functionality for the fuzzy sets. Enter an x value to\n"
+					  "be evaluated for membership in a given fuzzy set.\n")
+
 				print("1. Hand set - eval for the end effector fuzzy set\n"
 					  "2. Arm set  - eval for the whole arm fuzzy set\n"
-					  "3. Base set - eval for the rotating base fuzzy set")
-					  "4. exit")
-				input("Enter number: ")
+					  "3. Base set - eval for the rotating base fuzzy set\n"
+					  "4. All sets - eval for all fuzzy sets\n"
+					  "5. exit")
+				read = input("Enter number: ")
 
-			input("Enter x input value (as if from sensor): ")
+				digit = read.isdigit()
+				if (digit):
+					menu_input = int(read)
+					if (menu_input >= MEMBER_MENU_MIN and
+						menu_input <= MEMBER_MENU_MAX):
+						in_range = True
+					else:
+						print("Invalid input\n")
+				else:
+					print("Invalid input\n")
+		    # end while
 
+			if (menu_input == EXIT_VAL):
+				stay_flag == False
+			else: # continue with execution
+				afloat = False
+				while (not afloat):
+					print("\nNOTE: Hand set range: 0-1\n"
+							"      Arm  set range: 0-12\n"
+							"      Base set range: 0-12\n"
+							"      x can be out of this range\n")
+					read = input("Enter x input value (as if from sensor): ")
+
+					try:
+						xval = float(read)
+						afloat = True
+					except ValueError:
+						print("Invalid input")
+
+				if (menu_input == HAND_MENU_IN):
+					hand_membership = self.get_membership(self.fuzzy_hand_set,
+														  xval)
+					self.print_membership(hand_membership)
+				elif (menu_input == ARM_MENU_IN):
+					arm_membership = self.get_membership(self.fuzzy_arm_set,
+														 xval)
+					self.print_membership(arm_membership)
+				elif (menu_input == BASE_MENU_IN):
+					base_membership = self.get_membership(self.fuzzy_base_set,
+														  xval)
+					self.print_membership(base_membership)
+				else: # menu_input == ALL_MENU_IN
+					hand_membership = self.get_membership(self.fuzzy_hand_set,
+														  xval)
+					arm_membership = self.get_membership(self.fuzzy_arm_set,
+														  xval)
+					base_membership = self.get_membership(self.fuzzy_base_set,
+														  xval)
+					self.print_membership(hand_membership)
+					self.print_membership(arm_membership)
+					self.print_membership(base_membership)
+		# end while
 
 	def controller_exec(self):
-		stay_flag = True
-		while (stay_flag):
-			hand_membership = self.get_membership(self.fuzzy_hand_set, 1)
-			self.print_membership(hand_membership)
-			stay_flag = False
+		return None

@@ -413,12 +413,10 @@ class braccio_interface:
 
         if (read == FUZZY_CONT_EX):
             self.fuzzy_con.controller_exec()
-            return self.STAY_FLAG_RET
         elif (read == PRINT_FUZZY_SETS):
             return self.STAY_FLAG_RET
         elif (read == MEMBERSHIP_CALC_TEST):
             self.fuzzy_con.membership_test()
-            return self.STAY_FLAG_RET
         else:
             print("Invalid input\n")
 
