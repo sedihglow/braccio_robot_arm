@@ -27,6 +27,8 @@ class command_interface:
     MX_ANGLE = 0x7
     REQUEST_MX_ANGLE = 0x8
     SET_DFLT_POS = 0x9
+
+    UBYTE_MAX = 255
     
     def __init__(self, verbose):
         self.verbose = verbose 
@@ -43,17 +45,29 @@ class command_interface:
     def build_cmd_msg(self, cmd, *argv):
         msg = 0
         arg = argv
+        checked_arg = []
 
+
+
+        # - struct classs is using unsigned bytes in our use case so the passed
+        #   arguments cannot exceed UBYTE_MAX
+        for i in range(0, len(arg)):
+            if (arg[i] > self.UBYTE_MAX):
+                checked_arg.append(self.UBYTE_MAX)
+            else:
+                checked_arg.append(arg[i])
+        
         # Arguemnts for pack, pack(#ofargs->type, msg type, command issued,
         #                          num of arguments after command issued, argv*)
-        # 9B = 9 args, unsigned char (python type - integer)
+        # 9B = 9 args, unsigned char (python type - ubyte)
         if (cmd == self.MX_ANGLE):
-            msg = struct.pack("9B", self.CMD_MSG, cmd, 6, arg[0],
-                              arg[1], arg[2], arg[3], arg[4], arg[5])
+            msg = struct.pack("9B", self.CMD_MSG, cmd, 6, checked_arg[0],
+                              checked_arg[1], checked_arg[2], checked_arg[3], 
+                              checked_arg[4], checked_arg[5])
         elif (cmd == self.M1_ANGLE or cmd == self.M2_ANGLE or 
               cmd == self.M3_ANGLE or cmd == self.M4_ANGLE or
               cmd == self.M5_ANGLE or cmd == self.M6_ANGLE):
-            msg =  struct.pack("4B", self.CMD_MSG, cmd, 1, arg[0])
+            msg =  struct.pack("4B", self.CMD_MSG, cmd, 1, checked_arg[0])
         elif (cmd == self.REQUEST_MX_ANGLE):
             msg = struct.pack("3B", self.CMD_MSG, cmd, 0)
         elif (cmd == self.SET_DFLT_POS):

@@ -140,7 +140,7 @@ class braccio_interface:
                       "servo 0-5 (M1-M6)")
                 angles = input("Enter angles (M1, M2, M3, M4, M5, M6)"
                                ": ").split(", ")
-                if (len(angles) == self.NUM_SERVOS):
+                if (len(angles) >= self.NUM_SERVOS):
                     angle_range = True
                 else:
                     print("Invalid input\n")
@@ -413,6 +413,7 @@ class braccio_interface:
             # set new displacement vectors and print
             self.kin.create_fill_disp_vects()
             self.kin.print_disp_vects()
+            input("-- Press Enter to Continue --")
 
             # reset angles and displacement vectors
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
@@ -424,6 +425,7 @@ class braccio_interface:
             self.input_current_or_new_angles()
             self.kin.set_kin_vars() # in case angles changed
             self.kin.print_homo_trans_mats()
+            input("-- Press Enter to Continue --")
 
         return self.STAY_FLAG_RET
    
