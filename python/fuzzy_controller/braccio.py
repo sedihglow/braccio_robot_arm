@@ -2,6 +2,7 @@ from command import command_interface
 from arduino_serial import arduino_com
 from kin import kinematics
 from fuzzy_controller import fuzzy_controller
+import clear as term
 
 class braccio_interface:
     EXIT_FLAG_RET = False # Exit value to exit from menu or program
@@ -58,6 +59,8 @@ class braccio_interface:
                     self.kin.set_kin_vars()
                 elif(p_msg[0] == self.cmd.FINISH):
                     self.verbose_print("Arduino finished sending message")
+                    if (self.verbose):
+                        input("--- Press Enter to Continue ---")
                     finished = True
 
     # Directs the user to various interfaces and options for the braccio robot
@@ -71,19 +74,22 @@ class braccio_interface:
         MENU_MAX_IN = 4
         
 
-        print("\nThis program will allow you to tinker with all the servos\n"
-              "via the command interface with the Arduino controller.\n"
-              "It will also showcase an implementation of kinimatics\n"
-              "for this Braccio robot arm")
         
         in_range = False
         digit = False
         while (not digit or not in_range):
-            # print menu for cmd or inverse kin
-            print("\nWhich functionality would you like to run?") 
-            print("1. Command Interface (Tinker with servos and commands)\n"
+            term.clear()
+            print("\nThis program will allow you to control the braccio robot\n"
+                  "arm and demonstrate various robotics topics with the arm\n"
+                  "such as the following -\n"
+                  "- Tinker with the servos of the braccio robot arm\n"
+                  "- Demonstrate kinematics\n"
+                  "- Demonstrate a fuzzy controller\n")
+
+            print("\nWhich functionality would you like to run?\n"
+                  "1. Command Interface (Tinker with servos and commands)\n"
                   "2. Kinematics\n"
-                  "3. Fuzzy Controller (Example of fuzzy controller w/ braccio)\n"
+                  "3. Fuzzy Controller (example with braccio)\n"
                   "4. exit")
             read = input("Enter Number: ")
 
@@ -94,8 +100,10 @@ class braccio_interface:
                     in_range = True
                 else:
                     print("Invalid input\n")
+                    input("-- Press Enter to Continue --")
             else:
                 print("Invalid input\n")
+                input("-- Press Enter to Continue --")
 
         if (read == EXIT_VAL):
             return self.EXIT_FLAG_RET;
@@ -118,6 +126,7 @@ class braccio_interface:
                 stay_flag = self.fuzzy_controller_interface()
         else:
             print("Invalid input\n")
+            input("-- Press Enter to Continue --")
             
         return self.STAY_FLAG_RET;
    
@@ -135,6 +144,7 @@ class braccio_interface:
                     angle_range = True
                 else:
                     print("Invalid input\n")
+                    input("-- Press Enter to Continue --")
             
             i = 0 
             while (i < self.NUM_SERVOS and angles[i].isdigit()):
@@ -146,6 +156,7 @@ class braccio_interface:
                 digit = True
             else:
                 print(f"Invalid input - {angles[i]}\n")
+                input("-- Press Enter to Continue --")
         
         for i in range(0, self.NUM_SERVOS):
             self.kin.angles[i] = angles[i]
@@ -159,7 +170,10 @@ class braccio_interface:
         
         in_range = False
         digit = False
-        while (not digit or not in_range): 
+        first_pass = True
+        while (not digit or not in_range):
+            if (not first_pass):
+                term.clear()
             print("\nUse current Braccio angles or use user input angles?")
             print("1. Current angles.\n"
                   "2. User input angles.")
@@ -172,13 +186,16 @@ class braccio_interface:
                     in_range = True
                 else:
                     print("Invalid input\n")
+                    input("-- Press Enter to Continue --")
             else:
                 print("Invalid input\n")
-
+                input("-- Press Enter to Continue --")
+            first_pass = False
         if (read == USER_ANGLE_VAL):
             self.get_user_angles()
         else: #(read == CURRENT_ANGLES):
             print("Using Braccio's current angles")
+            input("-- Press Enter to Continue --")
     
     def print_cmd_menu(self):
         print("\nChoose angle to set or command to send\n"
@@ -215,6 +232,7 @@ class braccio_interface:
         in_range = False
         digit = False
         while (not digit or not in_range):
+            term.clear()
             self.print_cmd_menu()
             cmd_in = input("Enter number: ")
 
@@ -225,8 +243,10 @@ class braccio_interface:
                     in_range = True
                 else:
                     print("Invalid input\n")
+                    input("-- Press Enter to Continue --")
             else:
                 print("Invalid input\n")
+                input("-- Press Enter to Continue --")
 
         if (cmd_in == EXIT_PROGRAM):
                 return self.EXIT_FLAG_RET
@@ -290,8 +310,8 @@ class braccio_interface:
         return self.STAY_FLAG_RET
 
     def kin_menu(self):
-        print("\n--- Kinematics functionalities ---")
-        print("1. Rotation Matrix function\n"
+        print("\n--- Kinematics functionalities ---\n"
+              "1. Rotation Matrix function\n"
               "2. Displacement Vectors\n"
               "3. Homogeneous Transform Matrix.\n"
               "4. exit")
@@ -313,6 +333,7 @@ class braccio_interface:
         in_range = False
         digit = False
         while (not digit or not in_range):
+            term.clear()
             self.kin_menu()
             read = input("Enter number: ")
             
@@ -323,14 +344,17 @@ class braccio_interface:
                     in_range = True
                 else:
                     print("Invalid input\n")
+                    input("-- Press Enter to Continue --")
             else:
                 print("Invalid input\n")
+                input("-- Press Enter to Continue --")
         if (read == EXIT_VAL_IN):
             return self.EXIT_FLAG_RET
         
         if (read == ROT_MAT_IN): # rotation matrix functionality testing
+            term.clear()
             print("--- Testing rotation matrix function ---")
-            
+
             self.input_current_or_new_angles()
             
             in_range = False
@@ -347,8 +371,10 @@ class braccio_interface:
                         in_range = True
                     else:
                         print("Invalid input\n")
+                        input("-- Press Enter to Continue --")
                 else:
                     print("Invalid input\n")
+                    input("-- Press Enter to Continue --")
             
             in_range = False
             digit = False
@@ -364,8 +390,10 @@ class braccio_interface:
                         in_range = True
                     else:
                         print("Invalid input\n")
+                        input("-- Press Enter to Continue --")
                 else:
                     print("Invalid input\n")
+                    input("-- Press Enter to Continue --")
 
             rot_matrix = self.kin.create_rot_matrix(start_frame,end_frame)
             print("\n--rotation matrix {:d}_{:d}--".format(start_frame, 
@@ -377,7 +405,8 @@ class braccio_interface:
             self.arduino_serial.write(msg)
             self.read_exec()
         elif (read == DISP_VECT_IN): # test the displacement vector function
-            print("\nTesting displacement vectors")
+            term.clear()
+            print("\n--- Testing displacement vectors ---")
             
             self.input_current_or_new_angles()
             
@@ -390,7 +419,8 @@ class braccio_interface:
             self.arduino_serial.write(msg)
             self.read_exec()
         elif (read == HOMO_TRANS_IN): # Homogeneous transform functionality
-            print("\nTesting the Homogeneous Transform Matrix functionality.")
+            term.clear()
+            print("\n-- Testing the Homogeneous Transform Matrix function --")
             self.input_current_or_new_angles()
             self.kin.set_kin_vars() # in case angles changed
             self.kin.print_homo_trans_mats()
@@ -410,6 +440,7 @@ class braccio_interface:
         in_range = False
         digit = False
         while (not digit or not in_range):
+            term.clear()
             print("\nThis section shows the example of a fuzzy logic\n"
                   "controller and print/testing functionalities\n")
                   
@@ -426,19 +457,21 @@ class braccio_interface:
                     in_range = True
                 else:
                     print("Invalid input\n")
+                    input("-- Press Enter to Continue --")
             else:
                 print("Invalid input\n")
+                input("-- Press Enter to Continue --")
          
         if (read == EXIT_VAL):
             return self.EXIT_FLAG_RET
         elif (read == FUZZY_CONT_EX):
-            self.fuzzy_con.controller_exec()
+            self.fuzzy_con.fuzzy_controller_exec()
         elif (read == PRINT_FUZZY_SETS):
-            return self.STAY_FLAG_RET
+            self.fuzzy_con.print_fuzzy_sets()
         elif (read == MEMBERSHIP_CALC_TEST):
             self.fuzzy_con.membership_test()
         else:
             print("Invalid input\n")
-            print("SECOND INVALID INPUT\n")
+            input("-- Press Enter to Continue --")
 
         return self.STAY_FLAG_RET

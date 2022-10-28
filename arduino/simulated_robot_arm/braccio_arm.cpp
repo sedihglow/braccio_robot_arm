@@ -58,7 +58,11 @@ void braccio_arm::set_default_pos()
      * braccio.ServoMovement(DFLT_STEP_DELAY, angles.m1, angles.m2, angles.m3,
      *                     angles.m4, angles.m5, angles.m6);
      */
-    send_verbose("default position set\n");
+    send_verbose("default position set\n"
+                 "changed angles, M1: %d, M2: %d, M3: %d,"
+                 "M4: %d, M5: %d, M6: %d\n",
+                 angles.m1, angles.m2, angles.m3,
+                 angles.m4, angles.m5, angles.m6);
 }
 /*
  * Checks if there is something on the serial monitor. See serial.available()

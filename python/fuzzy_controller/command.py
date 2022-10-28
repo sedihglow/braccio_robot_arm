@@ -66,7 +66,7 @@ class command_interface:
     def parse_in_msg(self, msg):
         parsed = 0
         
-        parsed = struct.unpack("B", msg[0:1])
+        parsed = struct.unpack("B", msg[:1])
         if (parsed[0] == self.ACK):
             return parsed
         elif (parsed[0] == self.FINISH):
