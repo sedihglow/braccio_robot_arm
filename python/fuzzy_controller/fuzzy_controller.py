@@ -120,6 +120,17 @@ class fuzzy_controller:
 		# names of the fuzzy set and also used in fuzzy_set to sort its
 		# resulting list of dictionaries that stores the set element info
 		self.FUZZY_HAND_NAMES = ["at (AT)", "not at (NAT)"]
+
+		# set output values for hand elements
+		# if membership is 1 in AT, gripper fully closes.
+		# if membership is 1 in NAT, gripper fully opens.
+		# TODO: Honestly the end effector should be binary and not fuzzy,
+		#		but for the sake of example we will keep it fuzzy for now
+		#		and give NAT a low output set value. With how the fuzzy set
+		#		is setup, the end effector may close before surrounding an
+		#		object it may be trying to grab
+		self.FUZZY_HAND_OUT_SET_VAL = (73, 1)
+
 		# hand name indicies
 		self.AT, self.NAT = [0, 1]
 
@@ -132,6 +143,9 @@ class fuzzy_controller:
 								 "right (R)",
 								 "far right (FR)"
 							   ]
+		# set output values for base elements
+		self.FUZZY_BASE_OUT_SET_VAL = (20, 10, 1, 0, 1, 10, 20)
+
 		# base names indicies
 		(self.FL, self.L, self.CL, self.IF,
 		 self.CR, self.R, self.FR) = [
@@ -147,6 +161,9 @@ class fuzzy_controller:
 								"close front hand (CFH)",
 								"far front hand (FFH)"
 							   ]
+		# set output values for arm elements
+		self.FUZZY_ARM_OUT_SET_VAL = (20, 10, 1, 0, 1, 10, 20)
+
 		# arm names indicies
 		(self.FBH, self.CBH, self.VCBH, self.AH,
 		 self.VCFH, self.CFH, self.FFH) = [
@@ -244,14 +261,14 @@ class fuzzy_controller:
 		# 1, 0, or inbetween as the membership function without altering the
 		# original x_in for the caller
 		x = x_in
-		if (fuzzy_set.SET_NAME == self.HAND_NAME):
+		if (fuzzy_set is self.fuzzy_hand_set):
 			return self.get_hand_membership(x_in)
-		elif (fuzzy_set.SET_NAME == self.ARM_NAME):
+		elif (fuzzy_set is self.fuzzy_arm_set):
 			if (self.ARM_XSTART > x_in):
 				x = self.ARM_XSTART
 			elif (self.ARM_XEND < x_in):
 				x = self.ARM_XEND
-		elif (fuzzy_set.SET_NAME == self.BASE_NAME):
+		elif (fuzzy_set is self.fuzzy_base_set):
 			if (self.BASE_XSTART > x_in):
 				x = self.BASE_XSTART
 			elif (self.BASE_XEND < x_in):
@@ -523,7 +540,7 @@ class fuzzy_controller:
 			if (menu_input == EXIT_VAL):
 				stay_flag = False
 			else: # continue with execution
-				xval = get_user_crisp_input()
+				xval = self.get_user_crisp_input()
 
 				# get membership and print results
 				if (menu_input == HAND_MENU_IN):
@@ -661,6 +678,22 @@ class fuzzy_controller:
 				input("-- Press Enter to Continue --")
 
 		return xval
+
+	def get_crisp_outputs(self, fuzzy_set):
+		if (fuzzy_set is self.fuzzy_hand_set):
+			# get crisp output for hand set
+			return None
+		elif (fuzzy_set is self.fuzzy_arm_set):
+			# get crisp output for arm set
+			return None
+		elif (fuzzy_set is self.fuzzy_base_set):
+			# get crisp output for base set
+			return None
+		else:
+			print("Error: Invalid fuzzy set sent to get_crisp_outputs()")
+			return None
+
+		return None
 
 	def fuzzy_controller_exec(self):
 		return None
