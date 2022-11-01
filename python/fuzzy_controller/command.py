@@ -30,8 +30,10 @@ class command_interface:
 
     UBYTE_MAX = 255
     
-    def __init__(self, verbose):
+    def __init__(self, verbose, arduino_serial, kin):
         self.verbose = verbose 
+        self.arduino_serial = arduino_serial
+        self.kin = kin
     
     # prints the string without adding '\n'
     def sys_print(self, msg):
@@ -40,14 +42,39 @@ class command_interface:
     def print_verbose(self, msg):
         if (self.verbose):
             self.sys_print(msg) 
-    
+
+    # Read a message from the braccio controller.
+    # NOTE: Loops waiting for the finish sending command from the controller. 
+    #       Only call when something should be returning from the controller.
+	# TODO: Make a timer so if there is no response it moves on or calls
+	#		an error.
+    def read_exec(self):
+        finished = False
+        while (not finished):
+            read = self.arduino_serial.read()
+            if (read):
+                msg_size = int.from_bytes(read, byteorder="little", 
+                                          signed=False)
+                read = self.arduino_serial.read(msg_size)
+                p_msg = self.parse_in_msg(read)
+                if (p_msg[0] == self.ACK):
+                    self.print_verbose("ACK recieved")
+                elif (p_msg[0] == self.PRINT_MSG):
+                    self.exec_print(p_msg)
+                elif(p_msg[0] == self.CMD_MSG):
+                    self.exec_command(p_msg)
+                    self.kin.set_kin_vars()
+                elif(p_msg[0] == self.FINISH):
+                    self.print_verbose("Arduino finished sending message")
+                    if (self.verbose):
+                        input("--- Press Enter to Continue ---")
+                    finished = True
+
     # Builds a command type message in proper format for writing to serial
     def build_cmd_msg(self, cmd, *argv):
         msg = 0
         arg = argv
         checked_arg = []
-
-
 
         # - struct classs is using unsigned bytes in our use case so the passed
         #   arguments cannot exceed UBYTE_MAX
@@ -121,7 +148,7 @@ class command_interface:
         if (cmd == self.SENT_ANGLES):
             # copy param list to angles list
             for i in range(0,6):
-                angles[i] = param[i]
+                self.kin.angles[i] = param[i]
     
     # Execute a print from an incoming parsed message
     def exec_print(self, p_msg):

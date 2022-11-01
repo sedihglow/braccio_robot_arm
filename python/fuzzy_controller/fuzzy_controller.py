@@ -159,7 +159,7 @@ class fuzzy_controller:
 		(self.ARM_FBH, self.ARM_CBH, self.ARM_VCBH, self.ARM_AH,
 		 self.ARM_VCFH, self.ARM_CFH, self.ARM_FFH) = [
 										      0, 1, 2, 3, 4, 5, 6
-										  ]
+										]
 
 
 		# -- base names and indicies --
@@ -269,14 +269,14 @@ class fuzzy_controller:
 		# arm output set values
 		(ARM_FBH_OSV, ARM_CBH_OSV, ARM_VCBH_OSV, ARM_AH_OSV, ARM_VCFH_OSV,
 		 ARM_CFH_OSV, ARM_FFH_OSV) = [
-									     20, 10, 1, 0, 1, 10, 20
+									     -20, -10, -1, 0, 1, 10, 20
 									 ]
 
 
 		# base output set values
 		(BASE_FL_OSV, BASE_L_OSV, BASE_CL_OSV, BASE_IF_OSV, BASE_CR_OSV,
 		 BASE_R_OSV, BASE_FR_OSV) = [
-										20, 10, 1, 0, 1, 10, 20
+										-20, -10, -1, 0, 1, 10, 20
 									]
 
 
@@ -885,29 +885,91 @@ class fuzzy_controller:
 			return None
 
 	def fuzzy_controller_exec(self):
-		# read crisp inputs
-		x = get_user_crisp_input()
+		CONTINUE_VAL = 1
+		EXIT_VAL = 2
+		MIN_MENU_IN = 1
+		MAX_MENU_IN = 2
 
-		# get memberships
-		self.hand_membership = get_membership(self.fuzzy_hand_set, x)
-		self.arm_membership  = get_membership(self.fuzzy_arm_set, x)
-		self.base_membership = get_membership(self.fuzzy_base_set, x)
+		kin = self.kin
+		angles = [0, 0, 0, 0, 0, 0] # 6 angles for braccio
 
-		# get crisp output values
-		hand_output = get_crisp_outputs(self.fuzzy_hand_set)
-		print(f"hand set crisp output: {hand_output}")
-		arm_output  = get_crisp_outputs(self.fuzzy_arm_set)
-		print(f"arm set crisp output: {arm_output}")
-		base_output = get_crisp_outputs(self.fuzzy_base_set)
-		print(f"base set crisp output: {base_output}")
+		stay_flag = True
+		while (stay_flag):
+			# read crisp inputs
+			x = get_user_crisp_input()
 
-		# adjust servos as needed
+			# get memberships
+			self.hand_membership = get_membership(self.fuzzy_hand_set, x)
+			self.arm_membership  = get_membership(self.fuzzy_arm_set, x)
+			self.base_membership = get_membership(self.fuzzy_base_set, x)
 
-		# NOTE: Does NOT wait in this function for replys from the arduino
-		#		must do it outside of this function/class
-		msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, angles[0],
-									 angles[1], angles[2], angles[3],
-									 angles[4], angles[5])
+			# get crisp output values
+			hand_output = get_crisp_outputs(self.fuzzy_hand_set)
+			print(f"hand set crisp output: {hand_output}")
+			arm_output  = get_crisp_outputs(self.fuzzy_arm_set)
+			print(f"arm set crisp output: {arm_output}")
+			base_output = get_crisp_outputs(self.fuzzy_base_set)
+			print(f"base set crisp output: {base_output}")
 
-        self.arduino_serial.write(msg)
-		return None
+			# adjust servos as needed
+			# TODO: Figure out how to adjust the arm servos together instead of
+			#		changing all their angles the same ammount. Need to test on
+			#		physical braccio to see where the motion goes
+			tmp_angle = base_output + kin.angles[kin.BASE_M1]
+			angles[kin.BASE_M1] = math.ceil(tmp_angle)
+
+			tmp_angle = arm_output + kin.angles[kin.SHOULDER_M2]
+			angles[kin.SHOULDER_M2] = math.ceil(tmp_angle)
+
+			tmp_angle = arm__output + kin.angles[kin.ELBOW_M3]
+			angles[kin.ELBOW_M3] = math.ceil(tmp_angle)
+
+			tmp_angle = arm_output + kin.angles[kin.WRIST_VRT_M4]
+			angles[kin.WRIST_VRT_M4] = math.ceil(tmp_angle)
+
+			tmp_angle = arm_output + kin.angles[kin.WRIST_ROT_M5]
+			angles[kin.WRIST_ROT_M5] = math.ceil(tmp_angle)
+
+			tmp_angle = hand_output + kin.angles[kin.GRIP_M6]
+			angles[kin.GRIP_M6] = math.ceil(tmp_angle)
+
+			msg = self.cmd.build_cmd_msg(
+										 self.cmd.MX_ANGLE,
+										 angles[kin.BASE_M1],
+										 angles[kin.SHOULDER_M2],
+										 angles[kin.ELBOW_M3],
+										 angles[kin.WRIST_VRT_M4],
+										 angles[kin.WRIST_ROT_M5],
+										 angles[kin.GRIP_M6]
+									   )
+
+			self.arduino_serial.write(msg)
+			self.cmd.read_exec()
+
+			# reset angles to match braccio
+			msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
+			self.arduino_serial.write(msg)
+			self.cmd.read_exec()
+
+			digit = False
+			in_range = False
+			while (not digit or not in_range):
+				print("1. continue fuzzy example\n"
+					  "2. exit")
+				read = input("Enter number: ")
+
+				digit = read.isdigit()
+				if (digit):
+					read = int(read)
+					if (read >= MIN_MENU_IN and read <= MAX_MENU_IN):
+						in_range = True
+					else:
+						print("Invalid input\n")
+						input("-- Press Enter to Continue --")
+				else:
+					print("Invalid input\n")
+					input("-- Press Enter to Continue --")
+
+			if (read == EXIT_VAL):
+				stay_flag = False
+

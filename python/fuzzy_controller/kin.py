@@ -22,12 +22,12 @@ class kinematics:
             self.angles.append(0)
 		
 		# angle for servo indicies
-		self.BASE_M1      = 0 // base
-		self.SHOULDER_M2  = 1 // shoulder
-		self.ELBOW_M3     = 2 // elbow 
-		self.WRIST_VRT_M4 = 3 // wrist vertial
-		self.WRIST_ROT_M5 = 4 // wrist rotation
-		self.GRIP_M6      = 5 // gripper
+		self.BASE_M1      = 0 # base
+		self.SHOULDER_M2  = 1 # shoulder
+		self.ELBOW_M3     = 2 # elbow 
+		self.WRIST_VRT_M4 = 3 # wrist vertial
+		self.WRIST_ROT_M5 = 4 # wrist rotation
+		self.GRIP_M6      = 5 # gripper
 
         # Length of links between joints (servos) on arm
         self.link_len = []

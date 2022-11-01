@@ -14,13 +14,14 @@ class braccio_interface:
 		
         self.arduino_serial = arduino_com(port, baudrate, rtimeout)
 
-        self.cmd = command_interface(verbose)
         self.kin = kinematics()
 
-        self.fuzzy_con = fuzzy_controller(self.arduino_serial,
-                                          self.kin)
+        self.cmd = command_interface(verbose, self.arduino_serial, self.kin)
+
+        self.fuzzy_con = fuzzy_controller(self.arduino_serial, self.kin,
+                                          self.cmd)
     
-    def verbose_print(self, msg):
+    def print_verbose(self, msg):
         if (self.verbose):
             print(msg)
     
@@ -29,39 +30,12 @@ class braccio_interface:
         self.arduino_serial.begin()
 
         # get setup messages to confirm Arduino is on
-        self.read_exec()
+        self.cmd.read_exec()
 
         # init angles from Arduino
         msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
         self.arduino_serial.write(msg)
-        self.read_exec()
-
-    # Read a message from the braccio controller.
-    # NOTE: Loops waiting for the finish sending command from the controller. 
-    #       Only call when something should be returning from the controller.
-	# TODO: Make a timer so if there is no response it moves on or calls
-	#		an error.
-    def read_exec(self):
-        finished = False
-        while (not finished):
-            read = self.arduino_serial.read()
-            if (read):
-                msg_size = int.from_bytes(read, byteorder="little", 
-                                          signed=False)
-                read = self.arduino_serial.read(msg_size)
-                p_msg = self.cmd.parse_in_msg(read)
-                if (p_msg[0] == self.cmd.ACK):
-                    self.verbose_print("ACK recieved")
-                elif (p_msg[0] == self.cmd.PRINT_MSG):
-                    self.cmd.exec_print(p_msg)
-                elif(p_msg[0] == self.cmd.CMD_MSG):
-                    self.cmd.exec_command(p_msg, self.kin.angles)
-                    self.kin.set_kin_vars()
-                elif(p_msg[0] == self.cmd.FINISH):
-                    self.verbose_print("Arduino finished sending message")
-                    if (self.verbose):
-                        input("--- Press Enter to Continue ---")
-                    finished = True
+        self.cmd.read_exec()
 
     # Directs the user to various interfaces and options for the braccio robot
     # arm. 
@@ -72,8 +46,6 @@ class braccio_interface:
         EXIT_VAL = 4
         MENU_MIN_IN = 1
         MENU_MAX_IN = 4
-        
-
         
         in_range = False
         digit = False
@@ -113,12 +85,11 @@ class braccio_interface:
             while (stay_flag):
                 stay_flag = self.cmd_interface()
 
-                print("\nreading/exec messages from Arduino")
                 if (stay_flag):
                     # set angles to match braccio
-                    msg = self.cmd.build_cmd_msg(self.REQUEST_MX_ANGLE)
-                    self.arduino_serial.write(msg)
-                    self.read_exec()
+                    #msg = self.cmd.build_cmd_msg(self.REQUEST_MX_ANGLE)
+                    #self.arduino_serial.write(msg)
+                    self.cmd.read_exec()
         elif (read == KIN_INTER_VAL): # inverse kin
             stay_flag = self.STAY_FLAG_RET
             while (stay_flag):
@@ -306,10 +277,14 @@ class braccio_interface:
                 msg = self.cmd.build_cmd_msg(self.cmd.M6_ANGLE, angle)
 
         self.arduino_serial.write(msg)
+        print_verbose("\nreading/exec messages from Arduino")
+        self.cmd.read_exec()
 
         # retrieve changed angles from arduino to ensure it matches in the class
         msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
         self.arduino_serial.write(msg)
+        self.cmd.read_exec()
+
         return self.STAY_FLAG_RET
 
     def kin_menu(self):
@@ -351,6 +326,7 @@ class braccio_interface:
             else:
                 print("Invalid input\n")
                 input("-- Press Enter to Continue --")
+
         if (read == EXIT_VAL_IN):
             return self.EXIT_FLAG_RET
         
@@ -406,7 +382,7 @@ class braccio_interface:
             # reset angles to match braccio
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
-            self.read_exec()
+            self.cmd.read_exec()
         elif (read == DISP_VECT_IN): # test the displacement vector function
             term.clear()
             print("\n--- Testing displacement vectors ---")
@@ -421,14 +397,21 @@ class braccio_interface:
             # reset angles and displacement vectors
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
-            self.read_exec()
+            self.cmd.read_exec()
         elif (read == HOMO_TRANS_IN): # Homogeneous transform functionality
             term.clear()
             print("\n-- Testing the Homogeneous Transform Matrix function --")
+
             self.input_current_or_new_angles()
             self.kin.set_kin_vars() # in case angles changed
             self.kin.print_homo_trans_mats()
+
             input("-- Press Enter to Continue --")
+
+            # reset angles and displacement vectors
+            msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
+            self.arduino_serial.write(msg)
+            self.cmd.read_exec()
 
         return self.STAY_FLAG_RET
    
