@@ -111,7 +111,7 @@ class kinematics:
         print("--Homogeneous transform 4_5--")
         print(self.homo_trans_mat[4])
         print("--Homogeneous transform 0_5--")
-        print(self.homo_trans_mat[5])
+        print(self.homo_trans_mat[5], "\n")
 
     def print_disp_vects(self):
         print("Displacement Vectors")
@@ -124,7 +124,7 @@ class kinematics:
         print("---D[3-4]---")
         print(self.disp_vec[3])
         print("---D[4-5]---")
-        print(self.disp_vec[4])
+        print(self.disp_vec[4], "\n")
 
     # Creates the displacement vectors and places them in self.disp_vec
     def create_fill_disp_vects(self):

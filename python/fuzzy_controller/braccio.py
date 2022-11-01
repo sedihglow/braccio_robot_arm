@@ -371,7 +371,7 @@ class braccio_interface:
             rot_matrix = self.kin.create_rot_matrix(start_frame,end_frame)
             print("\n--rotation matrix {:d}_{:d}--".format(start_frame, 
                                                            end_frame))
-            print(rot_matrix)
+            print(rot_matrix, "\n")
             
             # reset angles to match braccio
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)

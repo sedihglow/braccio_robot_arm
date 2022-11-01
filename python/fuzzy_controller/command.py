@@ -58,7 +58,7 @@ class command_interface:
                 read = self.arduino_serial.read(msg_size)
                 p_msg = self.parse_in_msg(read)
                 if (p_msg[0] == self.ACK):
-                    self.print_verbose("ACK recieved\n")
+                    self.print_verbose("\nACK recieved\n")
                 elif (p_msg[0] == self.PRINT_MSG):
                     self.exec_print(p_msg)
                 elif(p_msg[0] == self.CMD_MSG):
