@@ -11,7 +11,7 @@ class braccio_interface:
 
     def __init__(self, verbose, port, baudrate, rtimeout):
         self.verbose = verbose
-		
+        
         self.arduino_serial = arduino_com(port, baudrate, rtimeout)
 
         self.kin = kinematics()

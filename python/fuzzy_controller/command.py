@@ -46,8 +46,8 @@ class command_interface:
     # Read a message from the braccio controller.
     # NOTE: Loops waiting for the finish sending command from the controller. 
     #       Only call when something should be returning from the controller.
-	# TODO: Make a timer so if there is no response it moves on or calls
-	#		an error.
+    # TODO: Make a timer so if there is no response it moves on or calls
+    #       an error.
     def read_exec(self):
         finished = False
         while (not finished):
@@ -58,14 +58,14 @@ class command_interface:
                 read = self.arduino_serial.read(msg_size)
                 p_msg = self.parse_in_msg(read)
                 if (p_msg[0] == self.ACK):
-                    self.print_verbose("ACK recieved")
+                    self.print_verbose("ACK recieved\n")
                 elif (p_msg[0] == self.PRINT_MSG):
                     self.exec_print(p_msg)
                 elif(p_msg[0] == self.CMD_MSG):
                     self.exec_command(p_msg)
                     self.kin.set_kin_vars()
                 elif(p_msg[0] == self.FINISH):
-                    self.print_verbose("Arduino finished sending message")
+                    self.print_verbose("Arduino finished sending message\n")
                     if (self.verbose):
                         input("--- Press Enter to Continue ---")
                     finished = True
@@ -124,7 +124,7 @@ class command_interface:
     
     # Execute a command from incoming p_msg (parsed message) and place angles
     # in message into angles argument
-    def exec_command(self, p_msg, angles):
+    def exec_command(self, p_msg):
         i = 0
         param = []
 
