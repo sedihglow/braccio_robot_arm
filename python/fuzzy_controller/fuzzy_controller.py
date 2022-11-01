@@ -183,15 +183,15 @@ class fuzzy_controller:
 
 
         # name, xstart and xend for each defined fuzzy set
+        self.HAND_NAME   = "hand"
+        self.HAND_XSTART = 0
+        self.HAND_XEND   = 1
         self.ARM_NAME    = "arm"
         self.ARM_XSTART  = 0
         self.ARM_XEND    = 12
         self.BASE_NAME   = "base"
         self.BASE_XSTART = 0
         self.BASE_XEND   = 12
-        self.HAND_NAME   = "hand"
-        self.HAND_XSTART = 0
-        self.HAND_XEND   = 1
 
         # setup end effector fuzzy set
         # TODO: Honestly the end effector should be binary and not fuzzy but
@@ -530,20 +530,20 @@ class fuzzy_controller:
               membership[0]["name"] == self.FUZZY_BASE_NAMES[self.BASE_R]):
             if (membership[0]["x_position"] == "left"):
                 # CFH/R left
-                membership[1]["membership"] = (x - 8) / 2
+                membership[0]["membership"] = (x - 8) / 2
                 # VCFH/CR right
                 membership[1]["membership"] = (10 - x) / 2
 
             else: # x_position == right
                 # CFH/R right
-                membership[1]["membership"] = (12 - x) / 2
+                membership[0]["membership"] = (12 - x) / 2
                 # FFH/FR (special left)
                 membership[1]["membership"] = (x - 10) / 2
 
         elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.ARM_FFH] or
               membership[0]["name"] == self.FUZZY_BASE_NAMES[self.BASE_FR]):
             # FFH/FR
-            membership[0]["membership"] = (x - 10)
+            membership[0]["membership"] = (x - 10) / 2
             # CFH/R right
             membership[1]["membership"] = (12 - x) / 2
 
@@ -606,10 +606,10 @@ class fuzzy_controller:
             if (menu_input == EXIT_VAL):
                 stay_flag = False
             else: # continue with execution
-                xval = self.get_user_crisp_input()
 
                 # get membership and print results
                 if (menu_input == HAND_MENU_IN):
+                    xval = self.get_user_crisp_input(self.HAND_NAME)
                     hand_membership = self.get_membership(self.fuzzy_hand_set,
                                                           xval)
                     if (hand_membership):
@@ -617,6 +617,7 @@ class fuzzy_controller:
                         print("-- fuzzy hand set membership --")
                         self.print_membership(hand_membership)
                 elif (menu_input == ARM_MENU_IN):
+                    xval = self.get_user_crisp_input(self.ARM_NAME)
                     arm_membership = self.get_membership(self.fuzzy_arm_set,
                                                          xval)
                     if (arm_membership):
@@ -624,6 +625,7 @@ class fuzzy_controller:
                         print("-- fuzzy arm set membership --")
                         self.print_membership(arm_membership)
                 elif (menu_input == BASE_MENU_IN):
+                    xval = self.get_user_crisp_input(self.BASE_NAME)
                     base_membership = self.get_membership(self.fuzzy_base_set,
                                                           xval)
                     if (base_membership):
@@ -727,14 +729,14 @@ class fuzzy_controller:
                 input("-- Press Enter to Continue --")
 
     # gets a crisp input from the user instead of a sensor.
-    def get_user_crisp_input(self):
+    def get_user_crisp_input(self, set_name):
         afloat = False
         while (not afloat):
             print("\nNOTE: Hand set range: 0-1\n"
                     "      Arm  set range: 0-12\n"
                     "      Base set range: 0-12\n"
                     "      x can be out of this range\n")
-            read = input("Enter x input value (as if from sensor): ")
+            read = input(f"Enter x input value for {set_name}: ")
 
             try:
                 xval = float(read)
@@ -896,7 +898,7 @@ class fuzzy_controller:
         stay_flag = True
         while (stay_flag):
             # read crisp inputs
-            x = get_user_crisp_input()
+            x = get_user_crisp_input("all")
 
             # get memberships
             self.hand_membership = get_membership(self.fuzzy_hand_set, x)
