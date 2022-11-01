@@ -36,6 +36,7 @@ class fuzzy_set:
 									   "xstart": xstart,
 									   "xend"  : xend,
 									   "xmid"  : xstart + (next_half_point / 2)
+									   "osv"   : None # Output set value
 									  })
 			else:
 				xend = xstart + next_point
@@ -43,6 +44,7 @@ class fuzzy_set:
 									   "xstart": xstart,
 									   "xend"  : xend,
 									   "xmid"  : xstart + next_half_point
+									   "osv"   : None # Output set value
 									  })
 
 			k = xend
@@ -65,6 +67,7 @@ class fuzzy_set:
 									   "xstart": xstart,
 									   "xend"  : xend,
 									   "xmid"  : xstart + (next_half_point / 2)
+									   "osv"   : None # Output set value
 									  })
 			else:
 				xend = xstart + next_point
@@ -72,9 +75,11 @@ class fuzzy_set:
 									   "xstart": xstart,
 									   "xend"  : xend,
 									   "xmid"  : xstart + next_half_point
+									   "osv"   : None # Output set value
 									  })
 			k = xend
 			name += 2
+
 
 		# sets FUZZY_SET in the same order as the set of element names passed
 		# into init. The lamba function returns i as the key.
@@ -103,6 +108,7 @@ class fuzzy_set:
 			key=lambda i: set_element_names.index(i["name"])
 		)
 
+
 	def print_fuzzy_set(self):
 		print(f"\n--- Fuzzy set {self.SET_NAME} ---")
 
@@ -113,45 +119,40 @@ class fuzzy_set:
 
 class fuzzy_controller:
 	def __init__(self, arduino_serial, kin):
+		# base output set values
+		FL_OSV = 20
+		L_OSV = 10
+		CL_OSV = 1
+		IF_OSV = 0
+		CR_OSV = 1
+		R_OSV = 10
+		FR_OSV = 20
+
+
 		self.arduino_serial = arduino_serial
 		self.kin = kin
 
-		# lists of the names for elements in the fuzzy set, used to set
-		# names of the fuzzy set and also used in fuzzy_set to sort its
-		# resulting list of dictionaries that stores the set element info
-		self.FUZZY_HAND_NAMES = ["at (AT)", "not at (NAT)"]
-
-		# set output values for hand elements
-		# if membership is 1 in AT, gripper fully closes.
-		# if membership is 1 in NAT, gripper fully opens.
 		# TODO: Honestly the end effector should be binary and not fuzzy,
 		#		but for the sake of example we will keep it fuzzy for now
 		#		and give NAT a low output set value. With how the fuzzy set
 		#		is setup, the end effector may close before surrounding an
-		#		object it may be trying to grab
-		self.FUZZY_HAND_OUT_SET_VAL = (73, 1)
+		#		object it may be trying to grab. This may be okay if we define
+		#		what the x range is to be small, so it doesnt close until
+		#		its right next to/on top of it. like 1cm or less
+
+		# the lists of the names for elements in the fuzzy set are used to set
+		# names of the fuzzy set and also used in fuzzy_set to sort its
+		# resulting list of dictionaries that stores the set element info.
+		# this applies to all definitions in the fuzzy sets,
+		# each with their own list of names
+
+		# -- hand names and indicies ---
+		self.FUZZY_HAND_NAMES = ["at (AT)", "not at (NAT)"]
 
 		# hand name indicies
-		self.AT, self.NAT = [0, 1]
+		self.HAND_AT, self.HAND_NAT = [0, 1]
 
-		self.FUZZY_BASE_NAMES = [
-								 "far left (FL)",
-								 "left (L)",
-								 "close left (CL)",
-								 "in front (IF)",
-								 "close right (CR)",
-								 "right (R)",
-								 "far right (FR)"
-							   ]
-		# set output values for base elements
-		self.FUZZY_BASE_OUT_SET_VAL = (20, 10, 1, 0, 1, 10, 20)
-
-		# base names indicies
-		(self.FL, self.L, self.CL, self.IF,
-		 self.CR, self.R, self.FR) = [
-								         0, 1, 2, 3, 4, 5, 6
-									 ]
-
+		# -- arm names and indicies --
 		self.FUZZY_ARM_NAMES = [
 							    "far behind hand (FBH)",
 								"close behind hand (CBH)",
@@ -161,16 +162,35 @@ class fuzzy_controller:
 								"close front hand (CFH)",
 								"far front hand (FFH)"
 							   ]
-		# set output values for arm elements
-		self.FUZZY_ARM_OUT_SET_VAL = (20, 10, 1, 0, 1, 10, 20)
 
 		# arm names indicies
-		(self.FBH, self.CBH, self.VCBH, self.AH,
-		 self.VCFH, self.CFH, self.FFH) = [
+		(self.ARM_FBH, self.ARM_CBH, self.ARM_VCBH, self.ARM_AH,
+		 self.ARM_VCFH, self.ARM_CFH, self.ARM_FFH) = [
 										      0, 1, 2, 3, 4, 5, 6
 										  ]
 
-		# name, xstart and xend for each defined set
+
+		# -- base names and indicies --
+		self.FUZZY_BASE_NAMES = [
+								 "far left (FL)",
+								 "left (L)",
+								 "close left (CL)",
+								 "in front (IF)",
+								 "close right (CR)",
+								 "right (R)",
+								 "far right (FR)"
+							   ]
+
+		# base names indicies
+		(self.BASE_FL, self.BASE_L, self.BASE_CL, self.BASE_IF,
+		 self.BASE_CR, self.BASE_R, self.BASE_FR) = [
+								         0, 1, 2, 3, 4, 5, 6
+									 ]
+
+
+
+
+		# name, xstart and xend for each defined fuzzy set
 		self.ARM_NAME    = "arm"
 		self.ARM_XSTART  = 0
 		self.ARM_XEND    = 12
@@ -181,13 +201,34 @@ class fuzzy_controller:
 		self.HAND_XSTART = 0
 		self.HAND_XEND   = 1
 
-		# next_half_point example, if set_xend = 12, set_xstart = 6, and
+		# setup end effector fuzzy set
+		# TODO: Honestly the end effector should be binary and not fuzzy but
+		#		for the sake of showing fuzzy logic i am keeping it as this
+		#		for now. It should be binary because we dont want it to close
+		#		to much before reaching its location so the hand can be wide
+		#		enough to wrap around the end location/item then close on it.
+		#		Also see TODO at top of init function
+		num_elements = len(self.FUZZY_HAND_NAMES)
+		next_half_point = (
+			(HAND_XEND - HAND_XSTART) / (num_elements - 1)
+		)
+		next_point = next_half_point * 2
+		self.fuzzy_hand_set = fuzzy_set(
+										self.HAND_NAME,
+										self.HAND_XSTART,
+										self.HAND_XEND,
+										self.FUZZY_HAND_NAMES,
+										next_half_point,
+										next_point
+    								   )
+
+		# next_half_point example, if set_xend = 12, set_xstart = 0, and
 		# num_elements = 7, then
-		# (12-6) / (7-1) = 2 where 2 is the half point of the triangle
+		# (12-0) / (7-1) = 2 where 2 is the half point of the triangle
 		# membership function
 		num_elements = len(self.FUZZY_ARM_NAMES)
 		next_half_point = (
-			(self.ARM_XEND - self.ARM_XSTART) / (num_elements - 1)
+			(ARM_XEND - ARM_XSTART) / (num_elements - 1)
 		)
 
 		# next point is the end of the set elements function when it goes
@@ -210,7 +251,7 @@ class fuzzy_controller:
 		# setup rotating base fuzzy set
 		num_elements = len(self.FUZZY_BASE_NAMES)
 		next_half_point = (
-			(self.BASE_XEND - self.BASE_XSTART) / (num_elements - 1)
+			(BASE_XEND - BASE_XSTART) / (num_elements - 1)
 		)
 		next_point = next_half_point * 2
 		self.fuzzy_base_set = fuzzy_set(
@@ -222,20 +263,53 @@ class fuzzy_controller:
 										next_point
 									   )
 
-		# setup end effector fuzzy set
-		num_elements = len(self.FUZZY_HAND_NAMES)
-		next_half_point = (
-			(self.HAND_XEND - self.HAND_XSTART) / (num_elements - 1)
-		)
-		next_point = next_half_point * 2
-		self.fuzzy_hand_set = fuzzy_set(
-										self.HAND_NAME,
-										self.HAND_XSTART,
-										self.HAND_XEND,
-										self.FUZZY_HAND_NAMES,
-										next_half_point,
-										next_point
-    								   )
+		# membership values for fuzzy sets
+		self.hand_membership = None
+		self.arm_membership  = None
+		self.base_membership = None
+
+		# --- define output set values for fuzzy set elements ---
+		# hand output set values
+		# if membership is 1 in AT, gripper fully closes.
+		# if membership is 1 in NAT, gripper fully opens.
+		HAND_AT_OSV, HAND_NAT_OSV = [73, 10]
+
+		# arm output set values
+		(ARM_FBH_OSV, ARM_CBH_OSV, ARM_VCBH_OSV, ARM_AH_OSV, ARM_VCFH_OSV,
+		 ARM_CFH_OSV, ARM_FFH_OSV) = [
+									     20, 10, 1, 0, 1, 10, 20
+									 ]
+
+
+		# base output set values
+		(BASE_FL_OSV, BASE_L_OSV, BASE_CL_OSV, BASE_IF_OSV, BASE_CR_OSV,
+		 BASE_R_OSV, BASE_FR_OSV) = [
+										20, 10, 1, 0, 1, 10, 20
+									]
+
+
+		# --- init output set values for converting to crisp outputs ---
+		# init output set values for hand elements
+		self.fuzzy_hand_set[self.AT]["osv"]  = HAND_AT_OSV
+		self.fuzzy_hand_set[self.NAT]["osv"] = HAND_NAT_OSV
+
+		# init output set values for arm elements
+		self.fuzzy_arm_set[self.ARM_FBH]["osv"]  = ARM_FBH_OSV
+		self.fuzzy_arm_set[self.ARM_CBH]["osv"]  = ARM_CBH_OSV
+		self.fuzzy_arm_set[self.ARM_VCBH]["osv"] = ARM_VCBH_OSV
+		self.fuzzy_arm_set[self.ARM_AH]["osv"]   = ARM_AH_OSV
+		self.fuzzy_arm_set[self.ARM_VCFH]["osv"] = ARM_VCFH_OSV
+		self.fuzzy_arm_set[self.ARM_CFH]["osv"]  = ARM_CFH_OSV
+		self.fuzzy_arm_set[self.ARM_FFH]["osv"]  = ARM_FFH_OSV
+
+		# init output set values for base elements
+		self.fuzzy_base_set[self.BASE_FL]["osv"] = BASE_FL_OSV
+		self.fuzzy_base_set[self.BASE_L]["osv"]  = BASE_L_OSV
+		self.fuzzy_base_set[self.BASE_CL]["osv"] = BASE_CL_OSV
+		self.fuzzy_base_set[self.BASE_IF]["osv"] = BASE_IF_OSV
+		self.fuzzy_base_set[self.BASE_CR]["osv"] = BASE_CR_OSV
+		self.fuzzy_base_set[self.BASE_R]["osv"]  = BASE_R_OSV
+		self.fuzzy_base_set[self.BASE_FR]["osv"] = BASE_FR_OSV
 
 	def get_hand_membership(self, x_in):
 		x = x_in
@@ -398,14 +472,14 @@ class fuzzy_controller:
 	#		  with current call of this function in get_membership() its
 	#		  redundant
 	def fill_arm_base_membership(self, membership, x):
-		if (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.FBH] or
-			membership[0]["name"] == self.FUZZY_BASE_NAMES[self.FL]):
+		if (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.ARM_FBH] or
+			membership[0]["name"] == self.FUZZY_BASE_NAMES[self.BASE_FL]):
 			# FBH/FL
 			membership[0]["membership"] = (2 - x) / 2
 			# CBH/L left
 			membership[1]["membership"] =  x / 2
-		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.CBH] or
-			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.L]):
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.ARM_CBH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.BASE_L]):
 			if (membership[0]["x_position"] == "left"):
 				# CBH/L left
 				membership[0]["membership"] = x / 2
@@ -418,8 +492,8 @@ class fuzzy_controller:
 				# VCBH/CL left
 				membership[1]["membership"] = (x - 2) / 2
 
-		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.VCBH] or
-		      membership[0]["name"] == self.FUZZY_BASE_NAMES[self.CL]):
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.ARM_VCBH] or
+		      membership[0]["name"] == self.FUZZY_BASE_NAMES[self.BASE_CL]):
 			if (membership[0]["x_position"] == "left"):
 				# VCBH/CL left
 				membership[0]["membership"] = (x - 2) / 2
@@ -432,8 +506,8 @@ class fuzzy_controller:
 				# AH/IF left
 				membership[1]["membership"] = (x - 4) / 2
 
-		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.AH] or
-			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.IF]):
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.ARM_AH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.BASE_IF]):
 			if (membership[0]["x_position"] == "left"):
 				# AH/IF left
 				membership[0]["membership"] = (x - 4) / 2
@@ -446,8 +520,8 @@ class fuzzy_controller:
 				# VCFH/CR left
 				membership[1]["membership"] = (x - 6) / 2
 
-		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.VCFH] or
-			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.CR]):
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.ARM_VCFH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.BASE_CR]):
 			if (membership[0]["x_position"] == "left"):
 				# VCFH/CR left
 				membership[0]["membership"] = (x - 6) / 2
@@ -460,8 +534,8 @@ class fuzzy_controller:
 				# CFH/R left
 				membership[1]["membership"] = (x - 8) / 2
 
-		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.CFH] or
-			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.R]):
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.ARM_CFH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.BASE_R]):
 			if (membership[0]["x_position"] == "left"):
 				# CFH/R left
 				membership[1]["membership"] = (x - 8) / 2
@@ -474,8 +548,8 @@ class fuzzy_controller:
 				# FFH/FR (special left)
 				membership[1]["membership"] = (x - 10) / 2
 
-		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.FFH] or
-			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.FR]):
+		elif (membership[0]["name"] == self.FUZZY_ARM_NAMES[self.ARM_FFH] or
+			  membership[0]["name"] == self.FUZZY_BASE_NAMES[self.BASE_FR]):
 			# FFH/FR
 			membership[0]["membership"] = (x - 10)
 			# CFH/R right
@@ -680,8 +754,21 @@ class fuzzy_controller:
 		return xval
 
 	def get_crisp_outputs(self, fuzzy_set):
+
 		if (fuzzy_set is self.fuzzy_hand_set):
 			# get crisp output for hand set
+			membership = self.hand_membership
+			if (membership[0]["name"] == self.FUZZY_HAND_NAMES[self.HAND_AT] or
+				membership[1]["name"] == self.FUZZY_HAND_NAMES[self.HAND_AT]
+			   ):
+
+			for i in range(0,2):
+				name = membership[0]["name"]
+				if (name == self.FUZZY_HAND_NAMES[self.HAND_AT]):
+
+
+
+
 			return None
 		elif (fuzzy_set is self.fuzzy_arm_set):
 			# get crisp output for arm set
