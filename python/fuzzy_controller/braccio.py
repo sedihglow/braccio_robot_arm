@@ -85,12 +85,6 @@ class braccio_interface:
             stay_flag = self.STAY_FLAG_RET
             while (stay_flag):
                 stay_flag = self.cmd_interface()
-
-                if (stay_flag):
-                    # set angles to match braccio
-                    #msg = self.cmd.build_cmd_msg(self.REQUEST_MX_ANGLE)
-                    #self.arduino_serial.write(msg)
-                    self.cmd.read_exec()
         elif (read == KIN_INTER_VAL): # inverse kin
             stay_flag = self.STAY_FLAG_RET
             while (stay_flag):
@@ -224,9 +218,13 @@ class braccio_interface:
                 input("-- Press Enter to Continue --")
 
         if (cmd_in == EXIT_PROGRAM):
-                return self.EXIT_FLAG_RET
-        
-        if (cmd_in == ALL_ANGLES):
+            return self.EXIT_FLAG_RET
+        elif (cmd_in == REQUEST_ANGS):
+            msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
+            self.arduino_serial.write(msg)
+            self.cmd.read_exec()
+            return self.STAY_FLAG_RET
+        elif (cmd_in == ALL_ANGLES):
             digit = False
             while (not digit):
                 angles = input("Enter angles (M1, M2, M3, M4, M5, M6)"
@@ -246,11 +244,6 @@ class braccio_interface:
             msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, angles[0], 
                                          angles[1], angles[2], angles[3],
                                          angles[4], angles[5])
-
-        elif (cmd_in == REQUEST_ANGS):
-            msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
-            self.arduino_serial.write(msg)
-            return self.STAY_FLAG_RET
         elif (cmd_in == SET_DFLT_POS):
             msg = self.cmd.build_cmd_msg(self.cmd.SET_DFLT_POS)
         else:
@@ -278,7 +271,7 @@ class braccio_interface:
                 msg = self.cmd.build_cmd_msg(self.cmd.M6_ANGLE, angle)
 
         self.arduino_serial.write(msg)
-        print_verbose("\nreading/exec messages from Arduino")
+        self.print_verbose("\nreading/exec messages from Arduino")
         self.cmd.read_exec()
 
         # retrieve changed angles from arduino to ensure it matches in the class
@@ -431,7 +424,7 @@ class braccio_interface:
         while (not digit or not in_range):
             term.clear()
             print("\nThis section shows the example of a fuzzy logic\n"
-                  "controller and print/testing functionalities\n")
+                  "controller and print/testing its functionalities\n")
                   
             print("1. Fuzzy logic example\n"
                   "2. Print Fuzzy Sets for Braccio\n"
