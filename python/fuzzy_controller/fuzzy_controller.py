@@ -2,7 +2,7 @@ import serial
 import command
 from kin import kinematics
 import math
-import clear as term
+from term import term_utility
 
 class fuzzy_set:
     def __init__(self, set_name, set_xstart, set_xend, set_element_names,
@@ -119,10 +119,11 @@ class fuzzy_set:
             print() # \n
 
 class fuzzy_controller:
-    def __init__(self, arduino_serial, kin, cmd):
+    def __init__(self, arduino_serial, kin, cmd, term):
         self.arduino_serial = arduino_serial
         self.kin = kin
         self.cmd = cmd
+        self.term = term
 
         # TODO: Honestly the end effector should be binary and not fuzzy,
         #       but for the sake of example we will keep it fuzzy for now
@@ -576,7 +577,7 @@ class fuzzy_controller:
             in_range = False
             digit = False
             while (not digit or not in_range):
-                term.clear()
+                self.term.clear()
                 print("\n--- Testing membership functionality ---\n"
                       "This section is to test the membership calculation\n"
                       "functionality for the fuzzy sets. Enter an x value to\n"
@@ -613,7 +614,7 @@ class fuzzy_controller:
                     hand_membership = self.get_membership(self.fuzzy_hand_set,
                                                           xval)
                     if (hand_membership):
-                        term.clear()
+                        self.term.clear()
                         print("-- fuzzy hand set membership --")
                         self.print_membership(hand_membership)
                 elif (menu_input == ARM_MENU_IN):
@@ -621,7 +622,7 @@ class fuzzy_controller:
                     arm_membership = self.get_membership(self.fuzzy_arm_set,
                                                          xval)
                     if (arm_membership):
-                        term.clear()
+                        self.term.clear()
                         print("-- fuzzy arm set membership --")
                         self.print_membership(arm_membership)
                 elif (menu_input == BASE_MENU_IN):
@@ -629,7 +630,7 @@ class fuzzy_controller:
                     base_membership = self.get_membership(self.fuzzy_base_set,
                                                           xval)
                     if (base_membership):
-                        term.clear()
+                        self.term.clear()
                         print("-- fuzzy base set membership --")
                         self.print_membership(base_membership)
                 else: # menu_input == ALL_MENU_IN
@@ -643,7 +644,7 @@ class fuzzy_controller:
 
                     # if successfully got membership, print result
                     if (hand_membership):
-                        term.clear()
+                        self.term.clear()
                         print("-- fuzzy hand set membership --")
                         self.print_membership(hand_membership)
                         input("-- Press Enter to Continue --")
@@ -651,7 +652,7 @@ class fuzzy_controller:
                         print("Error getting hand membership\n")
 
                     if (arm_membership):
-                        term.clear()
+                        self.term.clear()
                         print("-- fuzzy arm set membership --")
                         self.print_membership(arm_membership)
                         input("-- Press Enter to Continue --")
@@ -659,7 +660,7 @@ class fuzzy_controller:
                         print("Error getting arm membership\n")
 
                     if (base_membership):
-                        term.clear()
+                        self.term.clear()
                         print("-- fuzzy base set membership --")
                         self.print_membership(base_membership)
                     else:
@@ -682,7 +683,7 @@ class fuzzy_controller:
             in_range = False
             digit = False
             while (not digit or not in_range):
-                term.clear()
+                self.term.clear()
                 print("\n---- Print fuzzy set operation ---\n"
                       "1. Print Hand fuzzy set\n"
                       "2. Print Arm fuzzy set\n"
@@ -704,24 +705,24 @@ class fuzzy_controller:
                     input("-- Press Enter to Continue --")
 
             if (reading == PRINT_HAND_IN):
-                term.clear()
+                self.term.clear()
                 self.fuzzy_hand_set.print_fuzzy_set()
             elif (reading == PRINT_ARM_IN):
-                term.clear()
+                self.term.clear()
                 self.fuzzy_arm_set.print_fuzzy_set()
             elif (reading == PRINT_BASE_IN):
-                term.clear()
+                self.term.clear()
                 self.fuzzy_base_set.print_fuzzy_set()
             elif (reading == PRINT_ALL_IN):
-                term.clear()
+                self.term.clear()
                 self.fuzzy_hand_set.print_fuzzy_set()
                 input("-- Press Enter for Next Set --")
 
-                term.clear()
+                self.term.clear()
                 self.fuzzy_arm_set.print_fuzzy_set()
                 input("-- Press Enter for Next Set --")
 
-                term.clear()
+                self.term.clear()
                 self.fuzzy_base_set.print_fuzzy_set()
 
             if (reading == EXIT_VAL_IN):
@@ -908,7 +909,7 @@ class fuzzy_controller:
 
             # get crisp output values
             hand_output = self.get_crisp_outputs(self.fuzzy_hand_set)
-            print(f"hand set crisp output: {hand_output}")
+            print(f"\nhand set crisp output: {hand_output}")
             arm_output  = self.get_crisp_outputs(self.fuzzy_arm_set)
             print(f"arm set crisp output: {arm_output}")
             base_output = self.get_crisp_outputs(self.fuzzy_base_set)
@@ -957,7 +958,7 @@ class fuzzy_controller:
             digit = False
             in_range = False
             while (not digit or not in_range):
-                term.clear()
+                self.term.clear()
                 print("\n1. continue fuzzy example\n"
                       "2. exit")
                 read = input("Enter number: ")

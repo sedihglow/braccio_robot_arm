@@ -2,7 +2,7 @@ from command import command_interface
 from arduino_serial import arduino_com
 from kin import kinematics
 from fuzzy_controller import fuzzy_controller
-import clear as term
+from term import term_utility
 
 class braccio_interface:
     EXIT_FLAG_RET = False # Exit value to exit from menu or program
@@ -10,24 +10,20 @@ class braccio_interface:
     NUM_SERVOS = 6
 
     def __init__(self, verbose, port, baudrate, rtimeout):
-        self.verbose = verbose
+        self.term = term_utility(verbose)
         
         self.arduino_serial = arduino_com(port, baudrate, rtimeout)
 
         self.kin = kinematics()
 
-        self.cmd = command_interface(verbose, self.arduino_serial, self.kin)
+        self.cmd = command_interface(self.arduino_serial, self.kin, self.term)
 
         self.fuzzy_con = fuzzy_controller(self.arduino_serial, self.kin,
-                                          self.cmd)
-    
-    def print_verbose(self, msg):
-        if (self.verbose):
-            print(msg)
+                                          self.cmd, self.term)
     
     # Starts communication with the braccio controller and gets init angles
     def begin_com(self):
-        term.clear()
+        self.term.clear()
         self.arduino_serial.begin()
 
         # get setup messages to confirm Arduino is on
@@ -51,7 +47,7 @@ class braccio_interface:
         in_range = False
         digit = False
         while (not digit or not in_range):
-            term.clear()
+            self.term.clear()
             print("\nThis program will allow you to control the braccio robot\n"
                   "arm and demonstrate various robotics topics with the arm\n"
                   "such as the following -\n"
@@ -142,7 +138,7 @@ class braccio_interface:
         first_pass = True
         while (not digit or not in_range):
             if (not first_pass):
-                term.clear()
+                self.term.clear()
             print("\nUse current Braccio angles or use user input angles?")
             print("1. Current angles.\n"
                   "2. User input angles.")
@@ -201,7 +197,7 @@ class braccio_interface:
         in_range = False
         digit = False
         while (not digit or not in_range):
-            term.clear()
+            self.term.clear()
             self.print_cmd_menu()
             cmd_in = input("Enter number: ")
 
@@ -271,7 +267,7 @@ class braccio_interface:
                 msg = self.cmd.build_cmd_msg(self.cmd.M6_ANGLE, angle)
 
         self.arduino_serial.write(msg)
-        self.print_verbose("\nreading/exec messages from Arduino")
+        self.term.print_verbose("\nreading/exec messages from Arduino\n")
         self.cmd.read_exec()
 
         # retrieve changed angles from arduino to ensure it matches in the class
@@ -305,7 +301,7 @@ class braccio_interface:
         in_range = False
         digit = False
         while (not digit or not in_range):
-            term.clear()
+            self.term.clear()
             self.kin_menu()
             read = input("Enter number: ")
             
@@ -325,7 +321,7 @@ class braccio_interface:
             return self.EXIT_FLAG_RET
         
         if (read == ROT_MAT_IN): # rotation matrix functionality testing
-            term.clear()
+            self.term.clear()
             print("--- Testing rotation matrix function ---")
 
             self.input_current_or_new_angles()
@@ -378,7 +374,7 @@ class braccio_interface:
             self.arduino_serial.write(msg)
             self.cmd.read_exec()
         elif (read == DISP_VECT_IN): # test the displacement vector function
-            term.clear()
+            self.term.clear()
             print("\n--- Testing displacement vectors ---")
             
             self.input_current_or_new_angles()
@@ -393,7 +389,7 @@ class braccio_interface:
             self.arduino_serial.write(msg)
             self.cmd.read_exec()
         elif (read == HOMO_TRANS_IN): # Homogeneous transform functionality
-            term.clear()
+            self.term.clear()
             print("\n-- Testing the Homogeneous Transform Matrix function --")
 
             self.input_current_or_new_angles()
@@ -422,7 +418,7 @@ class braccio_interface:
         in_range = False
         digit = False
         while (not digit or not in_range):
-            term.clear()
+            self.term.clear()
             print("\nThis section shows the example of a fuzzy logic\n"
                   "controller and print/testing its functionalities\n")
                   

@@ -1,5 +1,5 @@
 import struct
-import sys
+from term import term_utility
 
 # see docs.python.org/3/library/struct.html for more information on struct 
 # methods.
@@ -31,19 +31,11 @@ class command_interface:
     UBYTE_MAX = 255
     UBYTE_MIN = 0
     
-    def __init__(self, verbose, arduino_serial, kin):
-        self.verbose = verbose 
+    def __init__(self, arduino_serial, kin, term):
         self.arduino_serial = arduino_serial
         self.kin = kin
+        self.term = term
     
-    # prints the string without adding '\n'
-    def sys_print(self, msg):
-        sys.stdout.write(msg)
-
-    def print_verbose(self, msg):
-        if (self.verbose):
-            self.sys_print(msg) 
-
     # Read a message from the braccio controller.
     # NOTE: Loops waiting for the finish sending command from the controller. 
     #       Only call when something should be returning from the controller.
@@ -59,15 +51,15 @@ class command_interface:
                 read = self.arduino_serial.read(msg_size)
                 p_msg = self.parse_in_msg(read)
                 if (p_msg[0] == self.ACK):
-                    self.print_verbose("\nACK recieved\n")
+                    self.term.print_verbose("\nACK recieved\n")
                 elif (p_msg[0] == self.PRINT_MSG):
                     self.exec_print(p_msg)
                 elif(p_msg[0] == self.CMD_MSG):
                     self.exec_command(p_msg)
                     self.kin.set_kin_vars()
                 elif(p_msg[0] == self.FINISH):
-                    self.print_verbose("Arduino finished sending message\n")
-                    if (self.verbose):
+                    self.term.print_verbose("Arduino finished sending msg\n")
+                    if (self.term.check_verbose()):
                         input("--- Press Enter to Continue ---")
                     finished = True
 
@@ -172,9 +164,9 @@ class command_interface:
         to_print = p_msg[i] # include '\n'
         
         if (cmd == self.PRINT_GENERAL):
-            self.sys_print(to_print.decode())
+            self.term.sys_print(to_print.decode())
         elif (cmd == self.PRINT_ERROR):
-            self.sys_print("BOARD ERROR: {}".format(to_print.decode()))
+            self.term.sys_print("BOARD ERROR: {}".format(to_print.decode()))
         elif (cmd == self.PRINT_VERBOSE):
-            self.print_verbose(to_print.decode())
+            self.term.print_verbose(to_print.decode())
 
