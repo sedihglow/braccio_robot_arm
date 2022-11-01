@@ -111,10 +111,13 @@ class braccio_interface:
         if (read == CMD_INTER_VAL): # cmd interface
             stay_flag = self.STAY_FLAG_RET
             while (stay_flag):
-                stay_flag = self.cmd_menu_input_send()
+                stay_flag = self.cmd_interface()
 
                 print("\nreading/exec messages from Arduino")
                 if (stay_flag):
+                    # set angles to match braccio
+                    msg = self.cmd.build_cmd_msg(self.REQUEST_MX_ANGLE)
+                    self.arduino_serial.write(msg)
                     self.read_exec()
         elif (read == KIN_INTER_VAL): # inverse kin
             stay_flag = self.STAY_FLAG_RET
@@ -214,7 +217,7 @@ class braccio_interface:
     # user input, builds the corresponding message and writes to the controller.
     # Once written, request the angles from the controller to make sure angles
     # being recorded on host and controller are consistant.
-    def cmd_menu_input_send(self):
+    def cmd_interface(self):
         # Menu option values based on print_cmd_menu() options
         M1_BASE      = 1
         M2_SHOULDER  = 2

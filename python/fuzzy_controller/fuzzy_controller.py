@@ -1,4 +1,5 @@
 import serial
+import command
 from kin import kinematics
 import math
 import clear as term
@@ -118,9 +119,10 @@ class fuzzy_set:
 			print() # \n
 
 class fuzzy_controller:
-	def __init__(self, arduino_serial, kin):
+	def __init__(self, arduino_serial, kin, cmd):
 		self.arduino_serial = arduino_serial
 		self.kin = kin
+		self.cmd = cmd
 
 		# TODO: Honestly the end effector should be binary and not fuzzy,
 		#		but for the sake of example we will keep it fuzzy for now
@@ -901,5 +903,11 @@ class fuzzy_controller:
 
 		# adjust servos as needed
 
+		# NOTE: Does NOT wait in this function for replys from the arduino
+		#		must do it outside of this function/class
+		msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, angles[0],
+									 angles[1], angles[2], angles[3],
+									 angles[4], angles[5])
 
+        self.arduino_serial.write(msg)
 		return None

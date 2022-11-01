@@ -13,24 +13,36 @@ class kinematics:
     DISP_VECTS = 5 # Displacement vectors
     ROT_MATS = 6   # Rotation Matricies
     HOMO_MATS = 6  # Homogeneous Matricies
+	DOF_ANGLES = 6 # 6 degrees of freedom
 
     def __init__(self):
 
         self.angles = []
-        for i in range(0,6,1):
+        for i in range(0,DOF_ANGLES,1):
             self.angles.append(0)
+		
+		# angle for servo indicies
+		self.BASE_M1      = 0 // base
+		self.SHOULDER_M2  = 1 // shoulder
+		self.ELBOW_M3     = 2 // elbow 
+		self.WRIST_VRT_M4 = 3 // wrist vertial
+		self.WRIST_ROT_M5 = 4 // wrist rotation
+		self.GRIP_M6      = 5 // gripper
 
         # Length of links between joints (servos) on arm
         self.link_len = []
         for i in range(0,self.LINKS,1):
             self.link_len.append(0)
-        
+		
+		# link len indicies
+		self.A0, self.A1, self.A2, self.A3, self.A4 = [0, 1, 2, 3, 4]
+
         # length in cm
-        self.link_len[0] = self.A0_LEN # base to shoulder
-        self.link_len[1] = self.A1_LEN # shoulder to elbow
-        self.link_len[2] = self.A2_LEN # elbow to wrist vertical
-        self.link_len[3] = self.A3_LEN # wrist vertial to wrist rotation
-        self.link_len[4] = self.A4_LEN # wrist rotation to end effector
+        self.link_len[A0] = self.A0_LEN # base to shoulder
+        self.link_len[A1] = self.A1_LEN # shoulder to elbow
+        self.link_len[A2] = self.A2_LEN # elbow to wrist vertical
+        self.link_len[A3] = self.A3_LEN # wrist vertial to wrist rotation
+        self.link_len[A4] = self.A4_LEN # wrist rotation to end effector
 
         # displacement vectors
         self.disp_vec = []
@@ -117,25 +129,25 @@ class kinematics:
     # Creates the displacement vectors and places them in self.disp_vec
     def create_fill_disp_vects(self):
         # Convert servo angles from degrees to radians
-        a0_rad = np.deg2rad(self.angles[0])
-        a1_rad = np.deg2rad(self.angles[1])
-        a2_rad = np.deg2rad(self.angles[2])
-        a3_rad = np.deg2rad(self.angles[3])
-        a4_rad = np.deg2rad(self.angles[4])
-        a5_rad = np.deg2rad(self.angles[5])
+        a0_rad = np.deg2rad(self.angles[self.BASE_M1])
+        a1_rad = np.deg2rad(self.angles[self.SHOULDER_M2])
+        a2_rad = np.deg2rad(self.angles[self.ELBOW_M3])
+        a3_rad = np.deg2rad(self.angles[self.WRIST_VRT_M4])
+        a4_rad = np.deg2rad(self.angles[self.WRIST_ROT_M5])
+        a5_rad = np.deg2rad(self.angles[self.GRIP_M6])
 
         # displacement vector 0-1
         self.disp_vec[0] = np.array([[0],
                                      [0],
-                                     [self.link_len[0]]])
+                                     [self.link_len[A0]]])
         # disp vect 1-2
-        self.disp_vec[1] = np.array([[self.link_len[1]*np.cos(a1_rad)],
-                                     [self.link_len[1]*np.sin(a1_rad)],
+        self.disp_vec[1] = np.array([[self.link_len[A1]*np.cos(a1_rad)],
+                                     [self.link_len[A1]*np.sin(a1_rad)],
                                      [0]])
 
         # disp vect 2-3
-        self.disp_vec[2] = np.array([[self.link_len[2]*np.cos(a2_rad)],
-                                     [self.link_len[2]*np.sin(a2_rad)],
+        self.disp_vec[2] = np.array([[self.link_len[A2]*np.cos(a2_rad)],
+                                     [self.link_len[A2]*np.sin(a2_rad)],
                                      [0]])
         
         # TODO: Finish figuring out disp vect 3-4
@@ -147,19 +159,19 @@ class kinematics:
         # disp vect 4-5
         self.disp_vec[4] = np.array([[0],
                                      [0],
-                                     [self.link_len[4]]])
+                                     [self.link_len[A4]]])
 
     # returns a numpy array matrix, on error returns zero matrix, finds the 
     # rotation matrix for the angles on the braccio
     # NOTE: @ syntax multiplies the matricies
     def create_rot_matrix(self, start_frame=0, end_frame=5):
         # Convert servo angles from degrees to radians
-        a0_rad = np.deg2rad(self.angles[0])
-        a1_rad = np.deg2rad(self.angles[1])
-        a2_rad = np.deg2rad(self.angles[2])
-        a3_rad = np.deg2rad(self.angles[3])
-        a4_rad = np.deg2rad(self.angles[4])
-        a5_rad = np.deg2rad(self.angles[5])
+        a0_rad = np.deg2rad(self.angles[self.BASE_M1])
+        a1_rad = np.deg2rad(self.angles[self.SHOULDER_M2])
+        a2_rad = np.deg2rad(self.angles[self.ELBOW_M3])
+        a3_rad = np.deg2rad(self.angles[self.WRIST_VRT_M4])
+        a4_rad = np.deg2rad(self.angles[self.WRIST_ROT_M5])
+        a5_rad = np.deg2rad(self.angles[self.GRIP_M6])
         
         if (end_frame < 1 or end_frame > 5 or 
             start_frame < 0 or start_frame > 4 or
