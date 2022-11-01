@@ -29,6 +29,7 @@ class command_interface:
     SET_DFLT_POS = 0x9
 
     UBYTE_MAX = 255
+    UBYTE_MIN = 0
     
     def __init__(self, verbose, arduino_serial, kin):
         self.verbose = verbose 
@@ -77,10 +78,12 @@ class command_interface:
         checked_arg = []
 
         # - struct classs is using unsigned bytes in our use case so the passed
-        #   arguments cannot exceed UBYTE_MAX
+        #   arguments cannot exceed UBYTE_MAX or be under UBYTE_MIN
         for i in range(0, len(arg)):
             if (arg[i] > self.UBYTE_MAX):
                 checked_arg.append(self.UBYTE_MAX)
+            elif (arg[i] < self.UBYTE_MIN):
+                checked_arg.append(self.UBYTE_MIN)
             else:
                 checked_arg.append(arg[i])
         

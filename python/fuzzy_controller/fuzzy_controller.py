@@ -142,7 +142,7 @@ class fuzzy_controller:
         self.FUZZY_HAND_NAMES = ["at (AT)", "not at (NAT)"]
 
         # hand name indicies
-        self.HAND_AT, self.HAND_NAT = [0, 1]
+        self.HAND_AT, self.HAND_NAT = (0, 1)
 
         # -- arm names and indicies --
         self.FUZZY_ARM_NAMES = [
@@ -157,9 +157,9 @@ class fuzzy_controller:
 
         # arm names indicies
         (self.ARM_FBH, self.ARM_CBH, self.ARM_VCBH, self.ARM_AH,
-         self.ARM_VCFH, self.ARM_CFH, self.ARM_FFH) = [
+         self.ARM_VCFH, self.ARM_CFH, self.ARM_FFH) = (
                                               0, 1, 2, 3, 4, 5, 6
-                                        ]
+                                        )
 
 
         # -- base names and indicies --
@@ -175,9 +175,9 @@ class fuzzy_controller:
 
         # base names indicies
         (self.BASE_FL, self.BASE_L, self.BASE_CL, self.BASE_IF,
-         self.BASE_CR, self.BASE_R, self.BASE_FR) = [
+         self.BASE_CR, self.BASE_R, self.BASE_FR) = (
                                          0, 1, 2, 3, 4, 5, 6
-                                     ]
+                                     )
 
 
 
@@ -264,20 +264,20 @@ class fuzzy_controller:
         # hand output set values
         # if membership is 1 in AT, gripper fully closes.
         # if membership is 1 in NAT, gripper fully opens.
-        HAND_AT_OSV, HAND_NAT_OSV = [73, 10]
+        HAND_AT_OSV, HAND_NAT_OSV = (73, 10)
 
         # arm output set values
         (ARM_FBH_OSV, ARM_CBH_OSV, ARM_VCBH_OSV, ARM_AH_OSV, ARM_VCFH_OSV,
-         ARM_CFH_OSV, ARM_FFH_OSV) = [
+         ARM_CFH_OSV, ARM_FFH_OSV) = (
                                          -20, -10, -1, 0, 1, 10, 20
-                                     ]
+                                     )
 
 
         # base output set values
         (BASE_FL_OSV, BASE_L_OSV, BASE_CL_OSV, BASE_IF_OSV, BASE_CR_OSV,
-         BASE_R_OSV, BASE_FR_OSV) = [
+         BASE_R_OSV, BASE_FR_OSV) = (
                                         -20, -10, -1, 0, 1, 10, 20
-                                    ]
+                                    )
 
 
         # --- init output set values for converting to crisp outputs ---
@@ -633,6 +633,7 @@ class fuzzy_controller:
                         print("-- fuzzy base set membership --")
                         self.print_membership(base_membership)
                 else: # menu_input == ALL_MENU_IN
+                    xval = self.get_user_crisp_input("all")
                     hand_membership = self.get_membership(self.fuzzy_hand_set,
                                                           xval)
                     arm_membership = self.get_membership(self.fuzzy_arm_set,
@@ -763,7 +764,7 @@ class fuzzy_controller:
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
             else: # if (name == self.FUZZY_HAND_NAMES[self.HAND_NAT]):
-                fuzz_osv = fuzzy_set.FUZZY_SET[self.HAND_AT]["osv"]
+                fuzz_osv = fuzzy_set.FUZZY_SET[self.HAND_NAT]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
             i += 1
@@ -774,47 +775,49 @@ class fuzzy_controller:
         found_counter = 0 # once it reaches len(membership)(only two elements in
                           # membership) treat it as found
         crisp_out = 0.0
-        membership = self.hand_membership
+        membership = self.arm_membership
         i = 0
         while (found_counter < len(membership) and
-               i < self.fuzzy_hand_set.NUM_ELEMENTS
+               i < self.fuzzy_arm_set.NUM_ELEMENTS
               ):
             name = membership[i]["name"]
             member_val = membership[i]["membership"]
-            if (name == self.FUZZY_HAND_NAMES[self.ARM_FBH]):
+            if (name == self.FUZZY_ARM_NAMES[self.ARM_FBH]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.ARM_FBH]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.ARM_CBH]):
+            elif (name == self.FUZZY_ARM_NAMES[self.ARM_CBH]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.ARM_CBH]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.ARM_VCBH]):
+            elif (name == self.FUZZY_ARM_NAMES[self.ARM_VCBH]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.ARM_VCBH]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.ARM_AH]):
+            elif (name == self.FUZZY_ARM_NAMES[self.ARM_AH]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.ARM_AH]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.ARM_VCFH]):
+            elif (name == self.FUZZY_ARM_NAMES[self.ARM_VCFH]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.ARM_VCFH]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.ARM_CFH]):
+            elif (name == self.FUZZY_ARM_NAMES[self.ARM_CFH]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.ARM_CFH]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.ARM_FFH]):
+            elif (name == self.FUZZY_ARM_NAMES[self.ARM_FFH]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.ARM_FFH]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
+                print(f"ARM_FFH - membership {member_val}, fuzz_osv {fuzz_osv} "
+                      f"crisp_out {crisp_out}")
 
             i += 1
 
@@ -824,45 +827,45 @@ class fuzzy_controller:
         found_counter = 0 # once it reaches len(membership)(only two elements in
                           # membership) treat it as found
         crisp_out = 0.0
-        membership = self.hand_membership
+        membership = self.base_membership
         i = 0
 
         while (found_counter < len(membership) and
-               i < self.fuzzy_hand_set.NUM_ELEMENTS
+               i < self.fuzzy_base_set.NUM_ELEMENTS
               ):
             name = membership[i]["name"]
             member_val = membership[i]["membership"]
-            if (name == self.FUZZY_HAND_NAMES[self.BASE_FL]):
+            if (name == self.FUZZY_BASE_NAMES[self.BASE_FL]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.BASE_FL]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.BASE_L]):
+            elif (name == self.FUZZY_BASE_NAMES[self.BASE_L]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.BASE_L]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.BASE_CL]):
+            elif (name == self.FUZZY_BASE_NAMES[self.BASE_CL]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.BASE_CL]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.BASE_IF]):
+            elif (name == self.FUZZY_BASE_NAMES[self.BASE_IF]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.BASE_IF]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.BASE_CR]):
+            elif (name == self.FUZZY_BASE_NAMES[self.BASE_CR]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.BASE_CR]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.BASE_R]):
+            elif (name == self.FUZZY_BASE_NAMES[self.BASE_R]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.BASE_R]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
 
-            elif (name == self.FUZZY_HAND_NAMES[self.BASE_FR]):
+            elif (name == self.FUZZY_BASE_NAMES[self.BASE_FR]):
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.BASE_FR]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
@@ -875,13 +878,13 @@ class fuzzy_controller:
         #TODO: Might do these "if is" checks in the individual calc functions.
         #      its redundant but safer for new people trying to use these functs
         if (fuzzy_set is self.fuzzy_hand_set):
-            return calc_hand_crisp_out(fuzzy_set)
+            return self.calc_hand_crisp_out(fuzzy_set)
         elif (fuzzy_set is self.fuzzy_arm_set):
             # get crisp output for arm set
-            return calc_arm_crisp_out(fuzzy_set)
+            return self.calc_arm_crisp_out(fuzzy_set)
         elif (fuzzy_set is self.fuzzy_base_set):
             # get crisp output for base set
-            return calc_base_crisp_out(fuzzy_set)
+            return self.calc_base_crisp_out(fuzzy_set)
         else:
             print("Error: Invalid fuzzy set sent to get_crisp_outputs()")
             return None
@@ -898,19 +901,19 @@ class fuzzy_controller:
         stay_flag = True
         while (stay_flag):
             # read crisp inputs
-            x = get_user_crisp_input("all")
+            x = self.get_user_crisp_input("all")
 
             # get memberships
-            self.hand_membership = get_membership(self.fuzzy_hand_set, x)
-            self.arm_membership  = get_membership(self.fuzzy_arm_set, x)
-            self.base_membership = get_membership(self.fuzzy_base_set, x)
+            self.hand_membership = self.get_membership(self.fuzzy_hand_set, x)
+            self.arm_membership  = self.get_membership(self.fuzzy_arm_set, x)
+            self.base_membership = self.get_membership(self.fuzzy_base_set, x)
 
             # get crisp output values
-            hand_output = get_crisp_outputs(self.fuzzy_hand_set)
+            hand_output = self.get_crisp_outputs(self.fuzzy_hand_set)
             print(f"hand set crisp output: {hand_output}")
-            arm_output  = get_crisp_outputs(self.fuzzy_arm_set)
+            arm_output  = self.get_crisp_outputs(self.fuzzy_arm_set)
             print(f"arm set crisp output: {arm_output}")
-            base_output = get_crisp_outputs(self.fuzzy_base_set)
+            base_output = self.get_crisp_outputs(self.fuzzy_base_set)
             print(f"base set crisp output: {base_output}")
 
             # adjust servos as needed
@@ -923,7 +926,7 @@ class fuzzy_controller:
             tmp_angle = arm_output + kin.angles[kin.SHOULDER_M2]
             angles[kin.SHOULDER_M2] = math.ceil(tmp_angle)
 
-            tmp_angle = arm__output + kin.angles[kin.ELBOW_M3]
+            tmp_angle = arm_output + kin.angles[kin.ELBOW_M3]
             angles[kin.ELBOW_M3] = math.ceil(tmp_angle)
 
             tmp_angle = arm_output + kin.angles[kin.WRIST_VRT_M4]
@@ -956,7 +959,7 @@ class fuzzy_controller:
             digit = False
             in_range = False
             while (not digit or not in_range):
-                print("1. continue fuzzy example\n"
+                print("\n1. continue fuzzy example\n"
                       "2. exit")
                 read = input("Enter number: ")
 
