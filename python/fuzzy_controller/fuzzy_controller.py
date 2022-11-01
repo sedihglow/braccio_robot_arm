@@ -816,8 +816,6 @@ class fuzzy_controller:
                 fuzz_osv = fuzzy_set.FUZZY_SET[self.ARM_FFH]["osv"]
                 crisp_out += (member_val * fuzz_osv)
                 found_counter += 1
-                print(f"ARM_FFH - membership {member_val}, fuzz_osv {fuzz_osv} "
-                      f"crisp_out {crisp_out}")
 
             i += 1
 
@@ -959,6 +957,7 @@ class fuzzy_controller:
             digit = False
             in_range = False
             while (not digit or not in_range):
+                term.clear()
                 print("\n1. continue fuzzy example\n"
                       "2. exit")
                 read = input("Enter number: ")
