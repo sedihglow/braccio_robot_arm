@@ -27,6 +27,7 @@ class braccio_interface:
     
     # Starts communication with the braccio controller and gets init angles
     def begin_com(self):
+        term.clear()
         self.arduino_serial.begin()
 
         # get setup messages to confirm Arduino is on

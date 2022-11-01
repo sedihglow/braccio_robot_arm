@@ -870,7 +870,7 @@ class fuzzy_controller:
 
 
     def get_crisp_outputs(self, fuzzy_set):
-        #TODO: Might do these if is checks in the individual calc functions
+        #TODO: Might do these "if is" checks in the individual calc functions.
         #      its redundant but safer for new people trying to use these functs
         if (fuzzy_set is self.fuzzy_hand_set):
             return calc_hand_crisp_out(fuzzy_set)

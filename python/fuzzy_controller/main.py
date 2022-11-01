@@ -16,6 +16,7 @@ if __name__ == "__main__":
     
     braccio = braccio_interface(cl_args.verbose, cl_args.port, 
                                 BAUD_RATE, RTIMEOUT)
+
     braccio.begin_com()
 
     try:
