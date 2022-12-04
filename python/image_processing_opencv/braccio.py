@@ -2,6 +2,7 @@ from command import command_interface
 from arduino_serial import arduino_com
 from kin import kinematics
 from fuzzy_controller import fuzzy_controller
+from image_processing import image_processing
 from term import term_utility
 
 class braccio_interface:
@@ -11,7 +12,7 @@ class braccio_interface:
 
     def __init__(self, verbose, port, baudrate, rtimeout):
         self.term = term_utility(verbose)
-        
+
         self.arduino_serial = arduino_com(port, baudrate, rtimeout)
 
         self.kin = kinematics()
@@ -20,7 +21,9 @@ class braccio_interface:
 
         self.fuzzy_con = fuzzy_controller(self.arduino_serial, self.kin,
                                           self.cmd, self.term)
-    
+
+        self.image_proc = image_processing(self.term)
+
     # Starts communication with the braccio controller and gets init angles
     def begin_com(self):
         self.term.clear()
@@ -35,18 +38,18 @@ class braccio_interface:
         self.cmd.read_exec()
 
     # Directs the user to various interfaces and options for the braccio robot
-    # arm. 
+    # arm.
     def interface_director(self):
         CMD_INTER_VAL  = 1 # cmd interface val
         KIN_INTER_VAL  = 2 # kinematics interface val
         FUZZY_CONT_VAL = 3 # fuzzy controller val
-        EXIT_VAL = 4
+        IMAGE_PROC_VAL = 4
+        EXIT_VAL = 5
         MENU_MIN_IN = 1
-        MENU_MAX_IN = 4
-        
+        MENU_MAX_IN = 5
+
         in_range = False
-        digit = False
-        while (not digit or not in_range):
+        while (not in_range):
             self.term.clear()
             print("\nThis program will allow you to control the braccio robot\n"
                   "arm and demonstrate various robotics topics with the arm\n"
@@ -59,20 +62,18 @@ class braccio_interface:
                   "1. Command Interface (Tinker with servos and commands)\n"
                   "2. Kinematics\n"
                   "3. Fuzzy Controller (example with braccio)\n"
-                  "4. exit")
+                  "4. Image Processing\n"
+                  "5. exit")
             read = input("Enter Number: ")
 
-            digit = read.isdigit()
-            if (digit):
+            try:
                 read = int(read)
                 if (read >= MENU_MIN_IN and read <= MENU_MAX_IN):
                     in_range = True
                 else:
-                    print("Invalid input\n")
-                    input("-- Press Enter to Continue --")
-            else:
-                print("Invalid input\n")
-                input("-- Press Enter to Continue --")
+                    self.term.input_invalid_wait()
+            except ValueError:
+                self.term.input_invalid_wait()
 
         if (read == EXIT_VAL):
             return self.EXIT_FLAG_RET;
@@ -89,19 +90,22 @@ class braccio_interface:
             stay_flag = self.STAY_FLAG_RET
             while (stay_flag):
                 stay_flag = self.fuzzy_controller_interface()
+        elif (read == IMAGE_PROC_VAL): # image processing functionality
+            stay_flag = self.STAY_FLAG_RET
+            while (stay_flag):
+                stay_flag = self.image_processing_interface()
         else:
-            print("Invalid input\n")
-            input("-- Press Enter to Continue --")
-            
+            self.term.input_invalid_wait()
+
         return self.STAY_FLAG_RET;
-   
+
     # fills kin.angles with user input
     def get_user_angles(self):
         digit = False
         while (not digit):
             angle_range = False
             while (not angle_range):
-                print("\nEnter 6 angles for braccio separated with commas," 
+                print("\nEnter 6 angles for braccio separated with commas,"
                       "servo 0-5 (M1-M6)")
                 angles = input("Enter angles (M1, M2, M3, M4, M5, M6)"
                                ": ").split(", ")
@@ -110,29 +114,29 @@ class braccio_interface:
                 else:
                     print("Invalid input\n")
                     input("-- Press Enter to Continue --")
-            
-            i = 0 
+
+            i = 0
             while (i < self.NUM_SERVOS and angles[i].isdigit()):
                 angles[i] = int(angles[i])
                 i += 1
-            
+
             # if all angles were digits and converted, break loop
             if (i == self.NUM_SERVOS):
                 digit = True
             else:
                 print(f"Invalid input - {angles[i]}\n")
                 input("-- Press Enter to Continue --")
-        
+
         for i in range(0, self.NUM_SERVOS):
             self.kin.angles[i] = angles[i]
-    
+
     # Get user angles for kin.angles or use the current angles from braccio
     def input_current_or_new_angles(self):
         CURRENT_ANGLES = 1
         USER_ANGLE_VAL = 2
         MENU_IN_MIN = 1
         MENU_IN_MAX = 2
-        
+
         in_range = False
         digit = False
         first_pass = True
@@ -143,7 +147,7 @@ class braccio_interface:
             print("1. Current angles.\n"
                   "2. User input angles.")
             read = input("Enter number: ")
-            
+
             digit = read.isdigit()
             if (digit):
                 read = int(read)
@@ -161,7 +165,7 @@ class braccio_interface:
         else: #(read == CURRENT_ANGLES):
             print("Using Braccio's current angles")
             input("-- Press Enter to Continue --")
-    
+
     def print_cmd_menu(self):
         print("\nChoose angle to set or command to send\n"
               "1. m1, base\n"
@@ -193,7 +197,7 @@ class braccio_interface:
         EXIT_PROGRAM = 10
         MENU_MIN_OPTS = 1
         MENU_MAX_OPTS = 10
-        
+
         in_range = False
         digit = False
         while (not digit or not in_range):
@@ -226,18 +230,18 @@ class braccio_interface:
                 angles = input("Enter angles (M1, M2, M3, M4, M5, M6)"
                                ": ").split(', ')
 
-                i = 0 
+                i = 0
                 while (i < self.NUM_SERVOS and angles[i].isdigit()):
                     angles[i] = int(angles[i])
                     i = i + 1
-                    
+
                 # if all angles were digits and converted, break loop
                 if (i == self.NUM_SERVOS):
                     digit = True
                 else:
                     print(f"Invalid input - {angles[i]}\n")
 
-            msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, angles[0], 
+            msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE, angles[0],
                                          angles[1], angles[2], angles[3],
                                          angles[4], angles[5])
         elif (cmd_in == SET_DFLT_POS):
@@ -283,10 +287,10 @@ class braccio_interface:
               "2. Displacement Vectors\n"
               "3. Homogeneous Transform Matrix.\n"
               "4. exit")
- 
+
     # Interface to execute kinematics, forward and inverse.
     def kin_interface(self):
-        # menu inputs based on kin_menu() 
+        # menu inputs based on kin_menu()
         ROT_MAT_IN    = 1 # Rotation Matrix Functionality input
         DISP_VECT_IN  = 2 # Displacement Vectors input
         HOMO_TRANS_IN = 3 # Homogeneous Transform Matrix Funcionality input
@@ -297,15 +301,15 @@ class braccio_interface:
         END_ROT_IN_MAX = 5
         START_ROT_IN_MIN = 0
         START_ROT_IN_MAX = 4
-        
+
         in_range = False
         digit = False
         while (not digit or not in_range):
             self.term.clear()
             self.kin_menu()
             read = input("Enter number: ")
-            
-            digit = read.isdigit() 
+
+            digit = read.isdigit()
             if (digit):
                 read = int(read)
                 if (read >= KIN_MENU_MIN and read <= KIN_MENU_MAX):
@@ -319,13 +323,13 @@ class braccio_interface:
 
         if (read == EXIT_VAL_IN):
             return self.EXIT_FLAG_RET
-        
+
         if (read == ROT_MAT_IN): # rotation matrix functionality testing
             self.term.clear()
             print("--- Testing rotation matrix function ---")
 
             self.input_current_or_new_angles()
-            
+
             in_range = False
             digit = False
             while (not digit or not in_range):
@@ -335,7 +339,7 @@ class braccio_interface:
                 digit = start_frame.isdigit()
                 if (digit):
                     start_frame = int(start_frame)
-                    if (start_frame >= START_ROT_IN_MIN and 
+                    if (start_frame >= START_ROT_IN_MIN and
                         start_frame <= START_ROT_IN_MAX):
                         in_range = True
                     else:
@@ -344,7 +348,7 @@ class braccio_interface:
                 else:
                     print("Invalid input\n")
                     input("-- Press Enter to Continue --")
-            
+
             in_range = False
             digit = False
             while (not digit or not in_range):
@@ -365,10 +369,10 @@ class braccio_interface:
                     input("-- Press Enter to Continue --")
 
             rot_matrix = self.kin.create_rot_matrix(start_frame,end_frame)
-            print("\n--rotation matrix {:d}_{:d}--".format(start_frame, 
+            print("\n--rotation matrix {:d}_{:d}--".format(start_frame,
                                                            end_frame))
             print(rot_matrix, "\n")
-            
+
             # reset angles to match braccio
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
@@ -376,9 +380,9 @@ class braccio_interface:
         elif (read == DISP_VECT_IN): # test the displacement vector function
             self.term.clear()
             print("\n--- Testing displacement vectors ---")
-            
+
             self.input_current_or_new_angles()
-            
+
             # set new displacement vectors and print
             self.kin.create_fill_disp_vects()
             self.kin.print_disp_vects()
@@ -404,7 +408,7 @@ class braccio_interface:
             self.cmd.read_exec()
 
         return self.STAY_FLAG_RET
-   
+
     # Interface to demonstrate a fuzzy controller, currently there is no
     # sensor so user input is used instead.
     def fuzzy_controller_interface(self):
@@ -414,32 +418,28 @@ class braccio_interface:
         EXIT_VAL = 4
         FC_MENU_MIN = 1
         FC_MENU_MAX = 4
-        
+
         in_range = False
-        digit = False
-        while (not digit or not in_range):
+        while (not in_range):
             self.term.clear()
             print("\nThis section shows the example of a fuzzy logic\n"
                   "controller and print/testing its functionalities\n")
-                  
+
             print("1. Fuzzy logic example\n"
                   "2. Print Fuzzy Sets for Braccio\n"
                   "3. Membership calculator testing\n"
                   "4. exit")
             read = input("Enter number: ")
-            
-            digit = read.isdigit()
-            if (digit):
+
+            try:
                 read = int(read)
                 if (read >= FC_MENU_MIN and read <= FC_MENU_MAX):
                     in_range = True
                 else:
-                    print("Invalid input\n")
-                    input("-- Press Enter to Continue --")
-            else:
-                print("Invalid input\n")
-                input("-- Press Enter to Continue --")
-         
+                    self.term.input_invalid_wait()
+            except ValueError:
+                self.term.input_invalid_wait()
+
         if (read == EXIT_VAL):
             return self.EXIT_FLAG_RET
         elif (read == FUZZY_CONT_EX):
@@ -449,7 +449,44 @@ class braccio_interface:
         elif (read == MEMBERSHIP_CALC_TEST):
             self.fuzzy_con.membership_test()
         else:
-            print("Invalid input\n")
-            input("-- Press Enter to Continue --")
+            self.term.input_invalid_wait()
+
+        return self.STAY_FLAG_RET
+
+    def image_processing_interface(self):
+        MOTION_NO_BRACCIO_EX = 1 # Motion detection example without Braccio
+        MOTION_WITH_BRACCIO_EX = 2 # Motion detection example with Braccio
+        EXIT_VAL = 3
+        MENU_MIN_VAL = 1
+        MENU_MAX_VAL = 3
+
+        in_range = False
+        while (not in_range):
+            self.term.clear()
+            print("\nThis section will demonstrate image processing through\n"
+                  "motion detection utilizing opencv functionalities\n")
+
+            print("1. Motion detection without Braccio movement\n"
+                  "2. Motion detection with Braccio Movement\n"
+                  "3. exit\n")
+            read = input("Enter number: ")
+
+            try:
+                read = int(read)
+                if (read >= MENU_MIN_VAL and read <= MENU_MAX_VAL):
+                    in_range = True
+                else:
+                    self.term.input_invalid_wait()
+            except ValueError:
+                self.term.input_invalid_wait()
+
+        if (read == EXIT_VAL):
+            return self.EXIT_FLAG_RET
+        elif (read == MOTION_NO_BRACCIO_EX):
+            self.image_proc.webcam_movement_no_braccio()
+        elif (read == MOTION_WITH_BRACCIO_EX):
+            self.image_proc.webcam_movement_with_braccio()
+        else:
+            self.term.input_invalid_wait()
 
         return self.STAY_FLAG_RET

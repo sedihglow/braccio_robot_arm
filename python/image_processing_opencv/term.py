@@ -17,3 +17,13 @@ class term_utility:
 
     def check_verbose(self):
         return self.verbose
+
+    def eprint(*args, **kwargs):
+        print(*args, file=sys.stderr, **kwargs)
+
+    def wait_for_enter(self):
+        input("--- Press Enter to Continue ---")
+
+    def input_invalid_wait(self):
+        print("Invalid input\n")
+        self.wait_for_enter()
