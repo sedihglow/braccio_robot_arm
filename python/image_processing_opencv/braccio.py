@@ -22,7 +22,8 @@ class braccio_interface:
         self.fuzzy_con = fuzzy_controller(self.arduino_serial, self.kin,
                                           self.cmd, self.term)
 
-        self.image_proc = image_processing(self.term)
+        self.image_proc = image_processing(self.arduino_serial, self.cmd,
+                                           self.kin, self.term)
 
     # Starts communication with the braccio controller and gets init angles
     def begin_com(self):
@@ -402,10 +403,12 @@ class braccio_interface:
 
             input("-- Press Enter to Continue --")
 
-            # reset angles and displacement vectors
+            # update angles and displacement vectors
             msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
             self.arduino_serial.write(msg)
             self.cmd.read_exec()
+
+            self.kin.set_kin_vars() # in case angles changed
 
         return self.STAY_FLAG_RET
 
@@ -488,5 +491,52 @@ class braccio_interface:
             self.image_proc.webcam_movement_with_braccio()
         else:
             self.term.input_invalid_wait()
+
+        # Input buffer flushes in webcam movement functions but in case it
+        # clears the contents and moves on before the arduino sends its
+        # finished sending messages and moving the braccio message and
+        # something else hits the input buffer we will use read_exec to
+        # ensure the buffer gets cleared till finish is recieved.
+        #
+        # TODO: There may be a chance it hits this spot in the exact moment
+        # where the input buffer was flushed, the buffer is empty, in_waiting
+        # returns zero, then right after in_waiting returns 0 something hits the
+        # input buffer from the arduino because it was mid communication. It is
+        # unlikely this will occur with the current implementation but is an
+        # edge case to be aware of and there should be a way to ensure this
+        # does not cause problems on the off chance it happens.
+        #
+        # There also may be a chance, but unlikely with the delay between
+        # ROI checks in webcam_movement_with_braccio and the input flush at the
+        # exit of the webcam reading loop, more than one string of arduino
+        # communications may end up in the buffer. This would mean there would
+        # be a finish communication from the arduino but its not the end of
+        # what is in the buffer. There may have been more than 1 command sent
+        # to the arduino and it fills the buffer with more than one string of
+        # responses. This would mean there would be more than 1 finish
+        # communication from the arduino and read_exec would end after the
+        # first one. This senario is resolved with a while loop.
+        #
+        # UPDATE: Deciding to set braccio to default position and updating the
+        # kin class in the image processing class after the functionality that
+        # changes the braccios angles.
+        # The above situations still apply even though read_exec will
+        # be called in the image processing class after the webcam flow is done
+        # executing because the read exec in the image processing class may hit
+        # a finish that isnt related and come from before the default angle and
+        # update angle commands so this while loop still needs to be here to
+        # cover that though i do not see it occuring often if at all with how
+        # the buffers are cleared through the execution process.
+        #
+        # Havent decided if doing this while loop in the image processing class
+        # woud cover it enough to make this while loop unneccisary but at this
+        # current time i do not think i will be doing this while loop in the
+        # image processing class and just calling read exec after each command
+        # sent like the rest of the program is implemented currently. That may
+        # change after some testing if time allows. Either way it shouldnt
+        # impact anything important even if it is redundantly checking the
+        # input buffer.
+        while (self.arduino_serial.arduino.in_waiting > 0):
+            self.cmd.read_exec()
 
         return self.STAY_FLAG_RET

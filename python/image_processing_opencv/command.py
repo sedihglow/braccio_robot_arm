@@ -1,7 +1,7 @@
 import struct
 from term import term_utility
 
-# see docs.python.org/3/library/struct.html for more information on struct 
+# see docs.python.org/3/library/struct.html for more information on struct
 # methods.
 
 class command_interface:
@@ -30,23 +30,23 @@ class command_interface:
 
     UBYTE_MAX = 255
     UBYTE_MIN = 0
-    
+
     def __init__(self, arduino_serial, kin, term):
         self.arduino_serial = arduino_serial
         self.kin = kin
         self.term = term
-    
+
     # Read a message from the braccio controller.
-    # NOTE: Loops waiting for the finish sending command from the controller. 
+    # NOTE: Loops waiting for the finish sending command from the controller.
     #       Only call when something should be returning from the controller.
     # TODO: Make a timer so if there is no response it moves on or calls
     #       an error.
-    def read_exec(self):
+    def read_exec(self, wait_for_enter=False):
         finished = False
         while (not finished):
             read = self.arduino_serial.read()
             if (read):
-                msg_size = int.from_bytes(read, byteorder="little", 
+                msg_size = int.from_bytes(read, byteorder="little",
                                           signed=False)
                 read = self.arduino_serial.read(msg_size)
                 p_msg = self.parse_in_msg(read)
@@ -59,7 +59,7 @@ class command_interface:
                     self.kin.set_kin_vars()
                 elif(p_msg[0] == self.FINISH):
                     self.term.print_verbose("Arduino finished sending msg\n")
-                    if (self.term.check_verbose()):
+                    if (self.term.check_verbose() and not wait_for_enter):
                         input("--- Press Enter to Continue ---")
                     finished = True
 
@@ -78,15 +78,15 @@ class command_interface:
                 checked_arg.append(self.UBYTE_MIN)
             else:
                 checked_arg.append(arg[i])
-        
+
         # Arguemnts for pack, pack(#ofargs->type, msg type, command issued,
         #                          num of arguments after command issued, argv*)
         # 9B = 9 args, unsigned char (python type - ubyte)
         if (cmd == self.MX_ANGLE):
             msg = struct.pack("9B", self.CMD_MSG, cmd, 6, checked_arg[0],
-                              checked_arg[1], checked_arg[2], checked_arg[3], 
+                              checked_arg[1], checked_arg[2], checked_arg[3],
                               checked_arg[4], checked_arg[5])
-        elif (cmd == self.M1_ANGLE or cmd == self.M2_ANGLE or 
+        elif (cmd == self.M1_ANGLE or cmd == self.M2_ANGLE or
               cmd == self.M3_ANGLE or cmd == self.M4_ANGLE or
               cmd == self.M5_ANGLE or cmd == self.M6_ANGLE):
             msg =  struct.pack("4B", self.CMD_MSG, cmd, 1, checked_arg[0])
@@ -94,29 +94,29 @@ class command_interface:
             msg = struct.pack("3B", self.CMD_MSG, cmd, 0)
         elif (cmd == self.SET_DFLT_POS):
             msg = struct.pack("3B", self.CMD_MSG, cmd, 0)
-        
+
         return msg
-    
+
     # Parse out a incomming message from the arduino controller.
     # Parsed messages unpack as a tupile even if its one value.
     def parse_in_msg(self, msg):
         parsed = 0
-        
+
         parsed = struct.unpack("B", msg[:1])
         if (parsed[0] == self.ACK):
             return parsed
         elif (parsed[0] == self.FINISH):
             return parsed
-        
+
         parsed = struct.unpack("3B", msg[:3])
-        
+
         if (parsed[0] == self.PRINT_MSG):
             parsed = struct.unpack("3B{}s".format(parsed[2]), msg)
         elif(parsed[0] == self.CMD_MSG):
             parsed = struct.unpack("3B{}B".format(parsed[2]), msg)
 
         return parsed
-    
+
     # Execute a command from incoming p_msg (parsed message) and place angles
     # in message into angles argument
     def exec_command(self, p_msg):
@@ -132,7 +132,7 @@ class command_interface:
 
         cmd = p_msg[i]
         i += 1
-        
+
         param_len = p_msg[i]
         i += 1
 
@@ -144,7 +144,7 @@ class command_interface:
             # copy param list to angles list
             for i in range(0,6):
                 self.kin.angles[i] = param[i]
-    
+
     # Execute a print from an incoming parsed message
     def exec_print(self, p_msg):
         i = 0
@@ -162,7 +162,7 @@ class command_interface:
 
         i += 1
         to_print = p_msg[i] # include '\n'
-        
+
         if (cmd == self.PRINT_GENERAL):
             self.term.sys_print(to_print.decode())
         elif (cmd == self.PRINT_ERROR):

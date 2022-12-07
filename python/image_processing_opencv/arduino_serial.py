@@ -10,13 +10,13 @@ class arduino_com:
         self.arduino = 0 # will be serial object
 
     def begin(self, delay=2):
-        self.arduino = serial.Serial(port=self.port, baudrate=self.baudrate, 
+        self.arduino = serial.Serial(port=self.port, baudrate=self.baudrate,
                                      timeout=self.rtimeout)
-        # arduino resets after serial connection, wait for arduino to setup 
+        # arduino resets after serial connection, wait for arduino to setup
         time.sleep(delay)
 
     def write(self, msg, delay=0.05):
-        self.arduino.write(msg) 
+        self.arduino.write(msg)
         time.sleep(delay)
 
     def read(self, size=1, delay=0.1):
@@ -28,4 +28,7 @@ class arduino_com:
         reading = self.arduino.readline()
         time.sleep(delay)
         return reading
-    
+
+    def clear_input_buffer(self):
+        if (self.arduino.in_waiting > 0):
+            self.arduino.reset_input_buffer()

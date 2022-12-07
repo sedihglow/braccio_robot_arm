@@ -38,7 +38,9 @@ class background_buffer:
 
 
 class motion_detection:
-    def __init__(self, width, height, down_scale, term):
+    def __init__(self, arduino_serial, cmd, width, height, down_scale, term):
+        self.arduino_serial = arduino_serial
+        self.cmd = cmd
         self.term = term
 
         # gaussian blur options
@@ -165,8 +167,27 @@ class motion_detection:
     #          buffer overflowing on the serial, call reset while exiting
     #          the webcam motion detection loop.
     #
+    #
+    #   UPDATE: Might try using read_exec with new flag in function to
+    #           identify its being called during webcam execution so it doesnt
+    #           block for user input. It might be fast enough during verbose
+    #           printing. The issue is taking time to check ROI for so long
+    #           seems not the best. Say the wait time is 15 sec, we cannot
+    #           make the braccio move for the first initial 15 seconds of the
+    #           execution which seems bad.
+    #
+    #           Further thinking, outside the initial say 15seconds, it will
+    #           check the ROI at or over 15seconds, but if there is no movement
+    #           it will not check again for another 15seconds. We would want it
+    #           to check the ROI every time until there is movement. So if there
+    #           is no movement we would want to keep checking the ROI each
+    #           time until there is.
+    #
     def detect_motion_moving_arm(self, frame, check_roi):
         FLIP = False
+        movement = False
+        left_move_pos = [180, 40, 180, 170, 90, 10] # angle positions for left
+        right_move_pos = [90, 90, 90, 90, 90, 73] # angle positions for right
 
         down_scale_frame = self.adjust_frame(frame, self.frame_size_ds, FLIP)
 
@@ -181,7 +202,7 @@ class motion_detection:
                                                   cv2.THRESH_BINARY)
         if (not retval):
             self.term.eprint("failed to get threshold mask for absolute diff")
-            return False, 0
+            return False, movement, 0
 
         if (check_roi):
             # get ROI for left and right side of frame from ad_mask
@@ -209,16 +230,41 @@ class motion_detection:
             roi_right = ad_mask[roi_row_start : roi_row_end,
                                 right_column_start : right_column_end]
 
+            # See if there is any motion (any white in ROI section)
             roi_left_movement = roi_left.any()
             roi_right_movement = roi_right.any()
             if (roi_left_movement and roi_right_movement):
-                print("BOTH SIDES MOVEMENT")
+                self.term.print_verbose("BOTH SIDES MOVEMENT\n")
+                msg = self.cmd.build_cmd_msg(self.cmd.SET_DFLT_POS)
+                self.arduino_serial.write(msg)
+                movement = True
             elif (roi_left_movement):
-                print("LEFT SIDE MOVEMENT")
+                self.term.print_verbose("LEFT SIDE MOVEMENT\n")
+                msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE,
+                                             left_move_pos[0],
+                                             left_move_pos[1],
+                                             left_move_pos[2],
+                                             left_move_pos[3],
+                                             left_move_pos[4],
+                                             left_move_pos[5],
+                                             )
+                self.arduino_serial.write(msg)
+                movement = True
             elif (roi_right_movement):
-                print("RIGHT SIDE MOVEMENT")
+                self.term.print_verbose("RIGHT SIDE MOVEMENT\n")
+                msg = self.cmd.build_cmd_msg(self.cmd.MX_ANGLE,
+                                             right_move_pos[0],
+                                             right_move_pos[1],
+                                             right_move_pos[2],
+                                             right_move_pos[3],
+                                             right_move_pos[4],
+                                             right_move_pos[5],
+                                             )
+                self.arduino_serial.write(msg)
+                movement = True
             else:
-                print("NO MOVEMENT")
+                self.term.print_verbose("NO MOVEMENT\n")
+                movement = False
 
         # set contours on frame to see movement boxes
         new_frame = self.set_contours(frame,
@@ -227,8 +273,10 @@ class motion_detection:
                                       self.COLOR_CODE_GREEN,
                                       self.contour_rect_thickness,
                                       self.down_scale)
+        if (movement):
+            self.arduino_serial.clear_input_buffer()
 
-        return True, new_frame
+        return True, movement, new_frame
 
     def detect_motion(self, frame):
         FLIP = False
@@ -259,7 +307,10 @@ class motion_detection:
         return True, new_frame
 
 class webcam_processing():
-    def __init__(self, camera, width, height, down_scale, fps, term):
+    def __init__(self, arduino_serial, cmd, camera, width, height, down_scale,
+                 fps, term):
+        self.arduino_serial = arduino_serial
+        self.cmd = cmd
         self.term = term
         self.frame_loss_limit = 20
         self.wait_key_delay = 1 # ms
@@ -291,18 +342,21 @@ class webcam_processing():
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
 
         # init frame is a downscaled frame for motion detection
-        self.motion_detect = motion_detection(width, height, down_scale, term)
+        self.motion_detect = motion_detection(arduino_serial, cmd, width,
+                                              height, down_scale, term)
 
     def webcam_flow_with_braccio(self):
         MIRROR_FLAG = 1 # y-axis
-        ROI_CHECK_TIME = 15 # seconds
+        ROI_CHECK_TIME = 10 # seconds
 
         motion_detect = self.motion_detect
 
         count = 0
         fail_count = 0
         exit_flag = False
-        last_time = time.time()
+        fps_last_time = time.time()
+        detect_last_time = time.time()
+        first_roi_detect = False
         while (not exit_flag):
             retval, frame = self.cap.read()
             if (not retval):
@@ -319,12 +373,17 @@ class webcam_processing():
             frame = cv2.flip(frame, MIRROR_FLAG)
 
             current_time = time.time()
-            if (current_time - last_time > ROI_CHECK_TIME):
-                retval, frame = motion_detect.detect_motion_moving_arm(frame,
-                                                                       True)
+            if (current_time - detect_last_time > ROI_CHECK_TIME or
+                not first_roi_detect):
+                retval, detect, frame = motion_detect.detect_motion_moving_arm(
+                                                                        frame,
+                                                                        True)
+                if (detect):
+                    detect_last_time = current_time
+                    first_roi_detect = True
             else:
-                retval, frame = motion_detect.detect_motion_moving_arm(frame,
-                                                                       False)
+                retval, _, frame = motion_detect.detect_motion_moving_arm(frame,
+                                                                          False)
             if (not retval):
                 self.term.eprint("Failed to detect motion")
                 fail_count += 1
@@ -339,8 +398,8 @@ class webcam_processing():
 
             # calc fps and show on frame
             current_time = time.time()
-            fps_text = "FPS: " + str(1 // (current_time - last_time))
-            last_time = current_time
+            fps_text = "FPS: " + str(1 // (current_time - fps_last_time))
+            fps_last_time = current_time
 
             cv2.putText(frame, fps_text, self.fps_text_loc,
                         cv2.FONT_HERSHEY_PLAIN, self.fps_font_scale,
@@ -353,6 +412,7 @@ class webcam_processing():
                 cv2.destroyAllWindows()
                 exit_flag = True
 
+        self.arduino_serial.clear_input_buffer()
         return 0
 
     def webcam_flow_no_braccio(self):
