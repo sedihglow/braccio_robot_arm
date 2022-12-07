@@ -955,25 +955,21 @@ class fuzzy_controller:
             self.arduino_serial.write(msg)
             self.cmd.read_exec()
 
-            digit = False
             in_range = False
-            while (not digit or not in_range):
+            while (not in_range):
                 self.term.clear()
                 print("\n1. continue fuzzy example\n"
                       "2. exit")
                 read = input("Enter number: ")
 
-                digit = read.isdigit()
-                if (digit):
+                try:
                     read = int(read)
                     if (read >= MIN_MENU_IN and read <= MAX_MENU_IN):
                         in_range = True
                     else:
-                        print("Invalid input\n")
-                        input("-- Press Enter to Continue --")
-                else:
-                    print("Invalid input\n")
-                    input("-- Press Enter to Continue --")
+                        self.term.input_invalid_wait()
+                except ValueError:
+                    self.term.input_invalid_wait()
 
             if (read == EXIT_VAL):
                 stay_flag = False

@@ -149,23 +149,22 @@ class braccio_interface:
                   "2. User input angles.")
             read = input("Enter number: ")
 
-            digit = read.isdigit()
-            if (digit):
+            try:
                 read = int(read)
                 if (read >= MENU_IN_MIN and read <= MENU_IN_MAX):
                     in_range = True
                 else:
-                    print("Invalid input\n")
-                    input("-- Press Enter to Continue --")
-            else:
-                print("Invalid input\n")
-                input("-- Press Enter to Continue --")
+                    self.term.input_invalid_wait()
+            except ValueError:
+                self.term.input_invalid_wait()
+
             first_pass = False
+
         if (read == USER_ANGLE_VAL):
             self.get_user_angles()
         else: #(read == CURRENT_ANGLES):
             print("Using Braccio's current angles")
-            input("-- Press Enter to Continue --")
+            self.term.wait_for_enter()
 
     def print_cmd_menu(self):
         print("\nChoose angle to set or command to send\n"
@@ -282,13 +281,6 @@ class braccio_interface:
 
         return self.STAY_FLAG_RET
 
-    def kin_menu(self):
-        print("\n--- Kinematics functionalities ---\n"
-              "1. Rotation Matrix function\n"
-              "2. Displacement Vectors\n"
-              "3. Homogeneous Transform Matrix.\n"
-              "4. exit")
-
     # Interface to execute kinematics, forward and inverse.
     def kin_interface(self):
         # menu inputs based on kin_menu()
@@ -304,23 +296,23 @@ class braccio_interface:
         START_ROT_IN_MAX = 4
 
         in_range = False
-        digit = False
-        while (not digit or not in_range):
+        while (not in_range):
             self.term.clear()
-            self.kin_menu()
+            print("\n--- Kinematics functionalities ---\n"
+                  "1. Rotation Matrix function\n"
+                  "2. Displacement Vectors\n"
+                  "3. Homogeneous Transform Matrix.\n"
+                  "4. exit")
             read = input("Enter number: ")
 
-            digit = read.isdigit()
-            if (digit):
+            try:
                 read = int(read)
                 if (read >= KIN_MENU_MIN and read <= KIN_MENU_MAX):
                     in_range = True
                 else:
-                    print("Invalid input\n")
-                    input("-- Press Enter to Continue --")
-            else:
-                print("Invalid input\n")
-                input("-- Press Enter to Continue --")
+                    self.term.input_invalid_wait()
+            except ValueError:
+                self.term.input_invalid_wait()
 
         if (read == EXIT_VAL_IN):
             return self.EXIT_FLAG_RET
@@ -332,52 +324,42 @@ class braccio_interface:
             self.input_current_or_new_angles()
 
             in_range = False
-            digit = False
-            while (not digit or not in_range):
+            while (not in_range):
                 print("\nEnter starting frame for rot matrix")
                 start_frame = input("Enter starting frame number (0-4): ")
 
-                digit = start_frame.isdigit()
-                if (digit):
+                try:
                     start_frame = int(start_frame)
                     if (start_frame >= START_ROT_IN_MIN and
                         start_frame <= START_ROT_IN_MAX):
                         in_range = True
                     else:
-                        print("Invalid input\n")
-                        input("-- Press Enter to Continue --")
-                else:
-                    print("Invalid input\n")
-                    input("-- Press Enter to Continue --")
+                        self.term.input_invalid_wait()
+                except ValueError:
+                    self.term.input_invalid_wait()
 
             in_range = False
-            digit = False
-            while (not digit or not in_range):
+            while (not in_range):
                 print("\nEnter ending frame for rot matrix")
                 end_frame = input("Enter ending frame number (1-5): ")
 
-                digit = end_frame.isdigit()
-                if (digit):
+                try:
                     end_frame = int(end_frame)
                     if (end_frame >= END_ROT_IN_MIN and
                         end_frame <= END_ROT_IN_MAX):
                         in_range = True
                     else:
-                        print("Invalid input\n")
-                        input("-- Press Enter to Continue --")
-                else:
-                    print("Invalid input\n")
-                    input("-- Press Enter to Continue --")
+                        self.term.input_invalid_wait()
+                except ValueError:
+                    self.term.input_invalid_wait()
 
             rot_matrix = self.kin.create_rot_matrix(start_frame,end_frame)
             print("\n--rotation matrix {:d}_{:d}--".format(start_frame,
                                                            end_frame))
             print(rot_matrix, "\n")
 
-            # reset angles to match braccio
-            msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
-            self.arduino_serial.write(msg)
-            self.cmd.read_exec()
+            self.term.wait_for_enter()
+
         elif (read == DISP_VECT_IN): # test the displacement vector function
             self.term.clear()
             print("\n--- Testing displacement vectors ---")
@@ -387,12 +369,9 @@ class braccio_interface:
             # set new displacement vectors and print
             self.kin.create_fill_disp_vects()
             self.kin.print_disp_vects()
-            input("-- Press Enter to Continue --")
 
-            # reset angles and displacement vectors
-            msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
-            self.arduino_serial.write(msg)
-            self.cmd.read_exec()
+            self.term.wait_for_enter()
+
         elif (read == HOMO_TRANS_IN): # Homogeneous transform functionality
             self.term.clear()
             print("\n-- Testing the Homogeneous Transform Matrix function --")
@@ -401,14 +380,16 @@ class braccio_interface:
             self.kin.set_kin_vars() # in case angles changed
             self.kin.print_homo_trans_mats()
 
-            input("-- Press Enter to Continue --")
+            self.term.wait_for_enter()
 
-            # update angles and displacement vectors
-            msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
-            self.arduino_serial.write(msg)
-            self.cmd.read_exec()
+        # Make sure the angles in the kin class match the braccio in case
+        # the user changed the kin class angles instead of using the current
+        # braccio angles.
+        msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
+        self.arduino_serial.write(msg)
+        self.cmd.read_exec()
 
-            self.kin.set_kin_vars() # in case angles changed
+        self.kin.set_kin_vars()
 
         return self.STAY_FLAG_RET
 
@@ -447,12 +428,25 @@ class braccio_interface:
             return self.EXIT_FLAG_RET
         elif (read == FUZZY_CONT_EX):
             self.fuzzy_con.fuzzy_controller_exec()
+
+            # Return braccio to default position and update the kinematics class
+            msg = self.cmd.build_cmd_msg(self.cmd.SET_DFLT_POS)
+            self.arduino_serial.write(msg)
+            self.cmd.read_exec()
+
+            # update angles and displacement vectors
+            msg = self.cmd.build_cmd_msg(self.cmd.REQUEST_MX_ANGLE)
+            self.arduino_serial.write(msg)
+            self.cmd.read_exec()
+
+            self.kin.set_kin_vars()
         elif (read == PRINT_FUZZY_SETS):
             self.fuzzy_con.print_fuzzy_sets()
         elif (read == MEMBERSHIP_CALC_TEST):
             self.fuzzy_con.membership_test()
         else:
             self.term.input_invalid_wait()
+
 
         return self.STAY_FLAG_RET
 
@@ -538,5 +532,13 @@ class braccio_interface:
         # input buffer.
         while (self.arduino_serial.arduino.in_waiting > 0):
             self.cmd.read_exec()
+
+        # NOTE: In the current implementaion the kinematics class is updated
+        # and handled in the function that changes the braccios position. In
+        # further development there may be functions that alter the position
+        # and angles of the braccio. If those functionalitys dont update the
+        # kin class like image_proc.webcam_movement_with_braccio() then the
+        # update of the kin variables need to occur here similar to other
+        # interface functions in this class
 
         return self.STAY_FLAG_RET

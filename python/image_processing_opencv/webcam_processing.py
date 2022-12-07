@@ -385,14 +385,15 @@ class webcam_processing():
                 retval, _, frame = motion_detect.detect_motion_moving_arm(frame,
                                                                           False)
             if (not retval):
-                self.term.eprint("Failed to detect motion")
+                self.term.eprint("Error: Error while detecting motion")
                 fail_count += 1
+                # If failure occurs too many times in a row, exit.
                 if (fail_count > self.detect_fail_limit):
-                    self.term.eprint("Cannot detect motion, failing to "
+                    self.term.eprint("Error: Cannot detect motion, failing to "
                                      "proccess frames")
                     return 1
                 else:
-                    continue
+                    continue # go to next iteration until fail limit is reached
 
             fail_count = 0
 
@@ -441,7 +442,7 @@ class webcam_processing():
 
             retval, frame = motion_detect.detect_motion(frame)
             if (not retval):
-                self.term.eprint("Failed to detect motion")
+                self.term.eprint("Error: Error while detecting motion")
                 fail_count += 1
                 if (fail_count > self.detect_fail_limit):
                     self.term.eprint("Cannot detect motion, failing to "
